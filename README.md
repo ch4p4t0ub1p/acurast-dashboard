@@ -27,6 +27,13 @@ réseau, blocs en direct et alertes sur votre téléphone via Home Assistant.
 
 ![Graphiques](docs/graphiques.webp)
 
+### Une carte par téléphone
+
+Dernier signal, intervalle moyen, disponibilité, frais payés, statut Compute, récompense estimée et d'où elle vient
+(CPU, mémoire, stockage), tâches reçues. Les adresses sont masquées sur la capture.
+
+![Cartes des téléphones](docs/telephones.webp)
+
 | Rentabilité | Classement |
 |---|---|
 | ![Rentabilité](docs/rentabilite.webp) | ![Classement](docs/classement.webp) |
