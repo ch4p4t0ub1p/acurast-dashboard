@@ -1,0 +1,15 @@
+# Vos données et vos adresses : ne jamais publier
+config.json
+config.json.bak
+config.json.tmp
+data/
+
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+
+# Divers
+.claude/
+*.tmp
+*.bak

@@ -1,0 +1,3 @@
+# Nécessaire pour acurast_evenements.py et acurast_classement.py
+# (acurast_releve.py n'utilise que la bibliothèque standard Python)
+substrate-interface==1.8.1

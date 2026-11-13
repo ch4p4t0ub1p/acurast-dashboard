@@ -1,0 +1,14 @@
+[Unit]
+Description=Relevé automatique Acurast (blockchain + prix) et tableau de bord HTTP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@DOSSIER@
+ExecStart=/usr/bin/python3 -u @DOSSIER@/acurast_releve.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

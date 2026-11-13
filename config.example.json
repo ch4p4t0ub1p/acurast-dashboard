@@ -1,0 +1,20 @@
+{
+  "rpc": "https://public-rpc.mainnet.acurast.com",
+  "intervalle_secondes": 300,
+  "port_http": 8090,
+  "electricite": {
+    "prix_kwh_eur": 0.20,
+    "watts_par_telephone": 4.0
+  },
+  "manager": "ADRESSE_DU_COMPTE_PRINCIPAL",
+  "telephones": [
+    { "nom": "Téléphone 1", "adresse": "ADRESSE_DU_PROCESSOR_1" },
+    { "nom": "Téléphone 2", "adresse": "ADRESSE_DU_PROCESSOR_2" }
+  ],
+  "feu_artifice": true,
+  "alertes": {
+    "actif": false,
+    "silence_minutes": 75,
+    "webhook": ""
+  }
+}

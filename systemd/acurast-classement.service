@@ -1,0 +1,15 @@
+[Unit]
+Description=Classement des métriques Acurast face au réseau
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@DOSSIER@
+ExecStart=@DOSSIER@/.venv/bin/python -u @DOSSIER@/acurast_classement.py
+Restart=always
+RestartSec=60
+Nice=10
+
+[Install]
+WantedBy=default.target

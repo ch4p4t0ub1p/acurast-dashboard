@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mes processors Acurast</title>
+<link rel="icon" href="img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Thème « terminal néon » : fond sombre quadrillé, panneaux en verre dépoli, accents cyan / violet / menthe */
+:root {
+  --bg: #060912; --surface: rgba(16, 24, 38, .62); --surface-solid: #0d1422; --fg: #e6f1ff; --muted: #8796ad; --line: rgba(120, 220, 255, .13);
+  --accent: #3ee6ff; --accent-soft: rgba(62, 230, 255, .12); --violet: #a06bff; --menthe: #3cf2a6;
+  --ok: #3cf2a6; --warn: #ffc857; --bad: #ff5c8a; --idle: #7c8799;
+  --display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --nav-h: 60px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html { scroll-behavior: smooth }
+body { margin: 0; color: var(--fg); font: 15px/1.5 var(--body); min-height: 100vh;
+  background:
+    radial-gradient(900px 600px at 85% -10%, rgba(160, 107, 255, .18), transparent 60%),
+    radial-gradient(800px 600px at -10% 30%, rgba(62, 230, 255, .10), transparent 60%),
+    radial-gradient(700px 500px at 60% 110%, rgba(60, 242, 166, .08), transparent 60%),
+    var(--bg);
+  background-attachment: fixed }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(62, 230, 255, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(62, 230, 255, .045) 1px, transparent 1px);
+  background-size: 44px 44px; mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%) }
+::selection { background: rgba(160, 107, 255, .45) }
+a { color: var(--accent) }
+code { font-family: var(--mono); color: var(--menthe) }
+
+/* ---------- Barre de navigation ---------- */
+.nav { position: sticky; top: 0; z-index: 40; height: var(--nav-h);
+  display: flex; align-items: center; gap: 16px; padding: 0 max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(6, 9, 18, .72); backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid var(--line) }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); flex: none }
+.brand img { width: 34px; height: 34px; mix-blend-mode: screen; filter: drop-shadow(0 0 8px rgba(62, 230, 255, .5)) }
+.brand b { font: 700 1rem var(--display); letter-spacing: .02em }
+.brand b span { color: var(--accent) }
+.menu { display: flex; gap: 2px; margin-left: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none }
+.menu::-webkit-scrollbar { display: none }
+.menu a, .menu button { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; white-space: nowrap;
+  font: 500 .8rem var(--mono); color: var(--muted); text-decoration: none; background: none; border: 0; cursor: pointer }
+.menu a img, .menu button img { width: 20px; height: 20px; mix-blend-mode: screen }
+.menu a:hover, .menu button:hover { color: var(--fg); background: rgba(255, 255, 255, .05) }
+.menu a.actif { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(62, 230, 255, .25) }
+.live { margin-left: auto; display: flex; align-items: center; gap: 10px; font: .78rem var(--mono); color: var(--muted); flex: none }
+#status { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-size: .85rem }
+#refresh { display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: .85rem; font-weight: 600; color: #050810;
+  background: linear-gradient(90deg, var(--accent), var(--menthe)); border: 0; box-shadow: 0 0 14px -2px rgba(62, 230, 255, .6) }
+#refresh:hover { filter: brightness(1.12); box-shadow: 0 0 20px 0 rgba(62, 230, 255, .7) }
+#refresh .ico { font-size: 1.1rem; line-height: 1 }
+@media (max-width: 760px) { #refresh .txt-btn { display: none } #refresh { padding: 8px 11px } }
+.burger { display: none; width: 40px; height: 40px; padding: 0; place-items: center; background: rgba(255, 255, 255, .05) }
+.burger span, .burger span::before, .burger span::after { display: block; width: 18px; height: 2px; background: var(--fg); border-radius: 2px; position: relative; transition: transform .2s }
+.burger span::before, .burger span::after { content: ""; position: absolute; left: 0 }
+.burger span::before { top: -6px } .burger span::after { top: 6px }
+.nav.ouvert .burger span { background: transparent }
+.nav.ouvert .burger span::before { transform: translateY(6px) rotate(45deg) }
+.nav.ouvert .burger span::after { transform: translateY(-6px) rotate(-45deg) }
+@media (max-width: 1460px) {
+  .burger { display: grid }
+  .menu { position: absolute; top: var(--nav-h); left: 0; right: 0; margin: 0; flex-direction: column; gap: 2px; padding: 10px 16px 16px;
+    background: rgba(6, 9, 18, .985); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line); display: none }
+  .nav.ouvert .menu { display: flex }
+  .menu a, .menu button { font-size: .95rem; padding: 10px 12px }
+}
+@media (max-width: 560px) { #status { display: none } .brand b { font-size: .9rem } }
+
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--idle); flex: none }
+.dot.on { background: var(--ok); box-shadow: 0 0 0 4px rgba(60, 242, 166, .18), 0 0 12px var(--ok); animation: pouls 2s infinite }
+.dot.err { background: var(--bad); box-shadow: 0 0 10px var(--bad) }
+@keyframes pouls { 50% { box-shadow: 0 0 0 7px rgba(60, 242, 166, 0), 0 0 12px var(--ok) } }
+
+button { font: 500 .82rem var(--mono); color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(62, 230, 255, .22);
+  border-radius: 8px; padding: 7px 12px; cursor: pointer; transition: background .15s, box-shadow .15s }
+button:hover { background: rgba(62, 230, 255, .2); box-shadow: 0 0 16px -4px var(--accent) }
+button:focus-visible, a:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+/* ---------- Bandeau d'accueil ---------- */
+.hero { position: relative; z-index: 1; min-height: 340px; display: grid; align-items: end; overflow: hidden;
+  border-bottom: 1px solid var(--line); isolation: isolate }
+.hero-img { position: absolute; inset: 0; z-index: -2; background: url(img/bandeau.webp) center / cover no-repeat;
+  animation: derive 30s ease-in-out infinite alternate }
+@keyframes derive { to { transform: scale(1.08) translateX(-2%) } }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(6, 9, 18, .15) 0%, rgba(6, 9, 18, .55) 55%, var(--bg) 100%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 3px) }
+#reseau { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; opacity: .7 }
+.hero-txt { max-width: 1180px; width: 100%; margin: 0 auto; padding: 48px max(16px, env(safe-area-inset-left, 0px)) 28px; display: grid; gap: 10px }
+.prompt { font: 500 .8rem var(--mono); color: var(--menthe); letter-spacing: .08em }
+.prompt::after { content: "▋"; margin-left: 4px; animation: curseur 1s steps(1) infinite }
+@keyframes curseur { 50% { opacity: 0 } }
+h1 { font: 700 clamp(2rem, 5.5vw, 3.6rem)/1.02 var(--display); margin: 0; letter-spacing: -.02em; text-wrap: balance;
+  background: linear-gradient(90deg, #fff 0%, var(--accent) 45%, var(--violet) 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 24px rgba(62, 230, 255, .25)) }
+.sub { color: #b9c7da; font: .9rem var(--mono) }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px }
+.chip { font: 500 .78rem var(--mono); padding: 6px 12px; border-radius: 99px; color: var(--fg);
+  background: rgba(10, 16, 28, .55); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px) }
+.chip b { color: var(--accent); font-weight: 600 }
+
+/* ---------- Mise en page ---------- */
+.wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding-block: 24px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 26px }
+section, details.panel { scroll-margin-top: calc(var(--nav-h) + 14px); min-width: 0 }
+h2 { font: 600 1.1rem/1.2 var(--display); margin: 0 0 14px; display: flex; align-items: center; gap: 12px; letter-spacing: .01em }
+h2 img { width: 44px; height: 44px; mix-blend-mode: screen; flex: none; filter: drop-shadow(0 0 10px rgba(62, 230, 255, .35)) }
+h2 .tag { font: 500 .7rem var(--mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-left: auto }
+.panel { position: relative; background: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015)), var(--surface);
+  border: 1px solid var(--line); border-radius: 16px; padding: 20px; min-width: 0;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 24px 60px -36px rgba(0, 0, 0, .9) }
+.panel::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; padding: 1px;
+  background: linear-gradient(135deg, rgba(62, 230, 255, .45), transparent 30%, transparent 70%, rgba(160, 107, 255, .45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude }
+.label { font: 500 .68rem var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted) }
+.val { font: 500 1.5rem/1.2 var(--mono); font-variant-numeric: tabular-nums; margin-top: 6px; overflow-wrap: anywhere }
+.val small { white-space: nowrap; font-size: .75rem; color: var(--muted); margin-left: 4px }
+.note { font-size: .8rem; color: var(--muted); margin-top: 4px }
+.pos { color: var(--ok) } .neg { color: var(--bad) }
+
+/* ---------- Synthèse ---------- */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+@media (min-width: 1040px) { .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)) } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px } }
+.kpi { position: relative; overflow: hidden; padding: 16px; border-radius: 14px; min-width: 0;
+  background: linear-gradient(160deg, rgba(62, 230, 255, .07), rgba(160, 107, 255, .05) 60%, rgba(255, 255, 255, .02)), var(--surface);
+  border: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform .2s, box-shadow .2s }
+.kpi:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px rgba(62, 230, 255, .3), 0 14px 40px -20px rgba(62, 230, 255, .5) }
+.kpi::after { content: ""; position: absolute; width: 120px; height: 120px; right: -50px; top: -50px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(62, 230, 255, .18), transparent 70%); pointer-events: none }
+.kpi:nth-child(even)::after { background: radial-gradient(circle, rgba(160, 107, 255, .2), transparent 70%) }
+
+/* ---------- Afficheur de blocs ---------- */
+.chaine { position: relative; display: flex; align-items: flex-end; gap: 0; padding: 6px 4px 18px; overflow: hidden }
+.attente { flex: none; display: flex; gap: 22px; padding-right: 26px; padding-top: 34px }
+.separateur { flex: none; align-self: stretch; width: 0; border-left: 2px dashed rgba(255, 255, 255, .25); margin: 18px 26px -6px 0; position: relative }
+.separateur::before, .separateur::after { position: absolute; left: 10px; font: 500 .66rem var(--mono); color: var(--muted); white-space: nowrap; letter-spacing: .08em }
+.separateur::before { content: "◀ À VENIR"; top: -14px; transform: translateX(calc(-100% - 20px)) }
+.separateur::after { content: "VALIDÉS ▶"; top: -14px }
+#chaine { display: flex; gap: 26px; flex: 1; min-width: 0; padding-top: 34px;
+  mask-image: linear-gradient(90deg, #000 75%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 75%, transparent) }
+.slot { flex: none; width: 124px }
+.slot.entre { animation: entre .9s cubic-bezier(.2, .9, .25, 1.2) both }
+@keyframes entre {
+  0% { width: 0; opacity: 0; transform: translateX(-110px) translateY(-26px) scale(.55) rotate(-8deg) }
+  60% { opacity: 1 }
+  100% { width: 124px; transform: none } }
+.bloc { --c1: #6a3cff; --c2: #3ee6ff; --rempli: 30%; position: relative; width: 124px; height: 124px; margin: 14px 14px 0 0 }
+.bloc .face { position: absolute; inset: 0; overflow: hidden; border-radius: 3px;
+  background: linear-gradient(180deg, rgba(40, 52, 80, .9), rgba(20, 28, 46, .95)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08) }
+.bloc .face::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--rempli);
+  background: linear-gradient(0deg, var(--c1), var(--c2)); opacity: .9; transition: height .8s }
+.bloc .dessus, .bloc .cote { position: absolute; background: linear-gradient(90deg, var(--c1), var(--c2)) }
+.bloc .dessus { left: 0; bottom: 100%; width: 100%; height: 14px; transform-origin: bottom left; transform: skewX(-45deg); filter: brightness(1.35); opacity: .85 }
+.bloc .cote { left: 100%; top: 0; width: 14px; height: 100%; transform-origin: top left; transform: skewY(-45deg); filter: brightness(.55);
+  background: linear-gradient(0deg, var(--c1), color-mix(in srgb, var(--c2) 40%, #1a2236) var(--rempli), #1a2236 var(--rempli)) }
+.bloc .txt { position: relative; z-index: 1; height: 100%; display: grid; align-content: space-between; justify-items: center; padding: 9px 6px;
+  text-align: center; font-family: var(--mono); text-shadow: 0 1px 3px rgba(0, 0, 0, .7) }
+.bloc .num { font: 600 .82rem var(--mono); color: #fff }
+.bloc .nb { font: 700 1.25rem/1 var(--display) }
+.bloc .nb small { display: block; font: 500 .62rem var(--mono); color: rgba(255, 255, 255, .8); margin-top: 3px }
+.bloc .age { font-size: .66rem; color: rgba(255, 255, 255, .85) }
+.bloc .badge { position: absolute; z-index: 2; top: -30px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font: 600 .62rem var(--mono); color: #04120c; background: var(--menthe); border-radius: 99px; padding: 2px 8px;
+  box-shadow: 0 0 14px var(--menthe); animation: flotte 2.4s ease-in-out infinite }
+@keyframes flotte { 50% { transform: translateX(-50%) translateY(-3px) } }
+.slot.entre .bloc { animation: eclair 1.4s ease-out }
+@keyframes eclair { 0% { filter: brightness(2.2) drop-shadow(0 0 30px var(--accent)) } 100% { filter: none } }
+.bloc.prochain .face { background: rgba(255, 255, 255, .03); box-shadow: inset 0 0 0 1px rgba(62, 230, 255, .35) }
+.bloc.prochain .face::before { height: 0; animation: remplit var(--duree, 6s) linear forwards; background: linear-gradient(0deg, rgba(160, 107, 255, .7), rgba(62, 230, 255, .3)) }
+@keyframes remplit { to { height: 100% } }
+.bloc.prochain .dessus, .bloc.prochain .cote { background: rgba(62, 230, 255, .14); filter: none }
+.bloc.prochain { animation: respire 1.6s ease-in-out infinite }
+@keyframes respire { 50% { filter: drop-shadow(0 0 14px rgba(62, 230, 255, .55)) } }
+.onde { position: absolute; z-index: 3; width: 20px; height: 20px; border-radius: 50%; pointer-events: none;
+  border: 2px solid var(--accent); animation: onde 1s ease-out forwards }
+@keyframes onde { from { transform: translate(-50%, -50%) scale(.2); opacity: 1 } to { transform: translate(-50%, -50%) scale(9); opacity: 0 } }
+.legende { display: flex; flex-wrap: wrap; gap: 8px 18px; font: .74rem var(--mono); color: var(--muted) }
+.legende i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px }
+@media (max-width: 640px) {
+  .attente { padding-right: 18px }
+  .separateur { margin-right: 18px }
+  .separateur::before { content: "◀" } .separateur::after { content: "▶" }
+  .slot { width: 96px } @keyframes entre { 100% { width: 96px; transform: none } }
+  .bloc { width: 92px; height: 92px; margin: 12px 4px 0 0 } #chaine { gap: 18px }
+  .bloc .nb { font-size: 1rem } .bloc .num { font-size: .7rem }
+}
+
+/* ---------- Téléphones ---------- */
+.phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px }
+.card { position: relative; background: linear-gradient(170deg, rgba(160, 107, 255, .09), rgba(62, 230, 255, .04) 50%, rgba(255, 255, 255, .02)), var(--surface);
+  border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; display: grid; gap: 14px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: transform .2s, box-shadow .2s }
+.card:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px rgba(160, 107, 255, .35), 0 18px 50px -24px rgba(160, 107, 255, .6) }
+.card-top { display: flex; justify-content: space-between; align-items: start; gap: 10px }
+.name { font: 600 1.08rem var(--display) }
+.addr { font: .72rem var(--mono); color: var(--muted); overflow-wrap: anywhere }
+.pill { font: 600 .7rem var(--mono); padding: 3px 10px; border-radius: 99px; white-space: nowrap; letter-spacing: .04em;
+  background: color-mix(in srgb, currentColor 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent) }
+.pill.ok { color: var(--ok) } .pill.warn { color: var(--warn) } .pill.bad { color: var(--bad) } .pill.idle { color: var(--idle) } .pill.info { color: var(--accent) }
+dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 0 }
+dd { margin: 2px 0 0; font: 500 .98rem var(--mono); font-variant-numeric: tabular-nums }
+dd .note { display: block; margin: 0 }
+.metrics { display: grid; gap: 7px; border-top: 1px solid var(--line); padding-top: 12px }
+.mrow { display: grid; grid-template-columns: 7.5em 1fr 4.5em; gap: 10px; align-items: center; font-size: .78rem }
+.bar { height: 6px; background: rgba(255, 255, 255, .06); border-radius: 3px; overflow: hidden }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--violet), var(--accent)); box-shadow: 0 0 10px var(--accent) }
+.mval { font-family: var(--mono); text-align: right; font-variant-numeric: tabular-nums }
+
+/* ---------- Tableaux ---------- */
+.chart-box { overflow-x: auto }
+svg text { fill: var(--muted); font: 11px var(--mono) }
+table { width: 100%; border-collapse: collapse; font: .82rem var(--mono); font-variant-numeric: tabular-nums }
+th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+th { font-weight: 500; color: var(--accent); opacity: .8; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+  position: sticky; top: 0; background: var(--surface-solid); z-index: 1 }
+tbody tr { transition: background .15s }
+tbody tr:hover { background: rgba(62, 230, 255, .05) }
+.tbl { overflow-x: auto; max-height: 340px }
+td .pill { display: inline-block }
+.rk { display: flex; gap: 8px; align-items: center; justify-content: flex-end }
+.rk-sub { font-size: .72rem; color: var(--muted); margin-top: 3px }
+.trend { font-size: .72rem; font-family: var(--mono); color: var(--muted) }
+.ev-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-bottom: 4px }
+.ev-head h2 { margin: 0 }
+.ev-filter { font: .78rem var(--mono); color: var(--muted); display: flex; gap: 8px; align-items: center }
+select { font: .82rem var(--mono); color: var(--fg); background: var(--surface-solid); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px }
+
+/* ---------- Graphiques ---------- */
+.plages { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: rgba(0, 0, 0, .3); border: 1px solid var(--line) }
+.plages button { background: none; border: 0; color: var(--muted); padding: 6px 12px; box-shadow: none }
+.plages button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(62, 230, 255, .3) }
+.graphes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; margin-top: 12px }
+.graphe { margin: 0; min-width: 0; padding: 14px 14px 8px; border-radius: 12px; background: rgba(0, 0, 0, .22); border: 1px solid var(--line) }
+.graphe figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px }
+.graphe figcaption b { font: 600 .95rem var(--display) }
+.graphe figcaption span { font: .74rem var(--mono); color: var(--muted) }
+.g-box { position: relative; touch-action: pan-y }
+.g-box svg { display: block; width: 100%; height: 200px; overflow: visible }
+.g-tip { position: absolute; top: 4px; transform: translateX(-50%); pointer-events: none; z-index: 2; min-width: 130px;
+  background: var(--surface-solid); border: 1px solid rgba(62, 230, 255, .3); border-radius: 8px; padding: 7px 10px;
+  font: .74rem/1.5 var(--mono); color: var(--fg); box-shadow: 0 10px 30px -10px #000; white-space: nowrap }
+.g-tip[hidden] { display: none }
+.g-tip-t { color: var(--muted); margin-bottom: 2px }
+.g-tip i, .g-legende i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px }
+.g-legende { display: flex; flex-wrap: wrap; gap: 4px 14px; font: .74rem var(--mono); color: var(--muted); margin-bottom: 4px }
+
+/* ---------- Bandeau et feu d'artifice ---------- */
+#fete-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50 }
+#fete-banner { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between;
+  border: 1px solid var(--ok); border-radius: 16px; padding: 14px 18px;
+  background: linear-gradient(90deg, rgba(60, 242, 166, .14), rgba(62, 230, 255, .06)), var(--surface);
+  box-shadow: 0 0 30px -8px rgba(60, 242, 166, .6); backdrop-filter: blur(12px) }
+#fete-banner[hidden] { display: none }
+.fete-txt { display: grid; gap: 2px; min-width: 0 }
+.fete-txt strong { font: 700 1.2rem var(--display); color: var(--ok); text-shadow: 0 0 14px rgba(60, 242, 166, .6) }
+#fete-montant { font: 500 1rem var(--mono); font-variant-numeric: tabular-nums }
+.fete-actions { display: flex; gap: 8px }
+
+/* ---------- Réglages ---------- */
+.cfg summary { cursor: pointer; list-style: none }
+.cfg summary::-webkit-details-marker { display: none }
+.cfg summary h2 { margin: 0 }
+.cfg summary h2::after { content: "▸"; margin-left: auto; color: var(--accent); transition: transform .2s }
+.cfg[open] summary h2::after { transform: rotate(90deg) }
+.cfg[open] summary { margin-bottom: 14px }
+.cfg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px }
+.cfg label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); min-width: 0 }
+.cfg input { font: .88rem var(--mono); color: var(--fg); background: rgba(0, 0, 0, .35); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0 }
+.cfg input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+.cfg input[aria-invalid="true"] { border-color: var(--bad) }
+.cfg h3 { font: 600 .78rem var(--mono); margin: 22px 0 10px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em }
+.cfg h3::before { content: "// "; color: var(--muted) }
+.cfg-tel { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr) auto; gap: 8px 12px; align-items: end;
+  padding: 10px 0; border-top: 1px solid var(--line) }
+@media (max-width: 640px) { .cfg-tel { grid-template-columns: 1fr auto } .cfg-tel .cfg-adr { grid-column: 1 / -1; grid-row: 2 } }
+.cfg-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px }
+.cfg .cfg-check { display: flex; gap: 10px; align-items: center; font-size: .9rem; color: var(--fg) }
+.cfg .cfg-check input { width: 18px; height: 18px; accent-color: var(--accent); flex: none }
+button.primary { background: linear-gradient(90deg, var(--violet), var(--accent)); color: #050810; border: 0; font-weight: 600 }
+button.danger { color: var(--bad); background: rgba(255, 92, 138, .1); border-color: rgba(255, 92, 138, .3) }
+button:disabled { opacity: .55; cursor: default }
+#cfg-msg { font-size: .85rem }
+#cfg-msg.ok, #cfg-al-msg.ok { color: var(--ok) } #cfg-msg.err, #cfg-al-msg.err { color: var(--bad) }
+#cfg-al-msg { font-size: .85rem }
+
+footer { color: var(--muted); font: .74rem/1.6 var(--mono); border-top: 1px solid var(--line); padding-top: 16px }
+
+/* apparition des panneaux au défilement */
+.revele { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease }
+.revele.vu { opacity: 1; transform: none }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important }
+  .revele { opacity: 1; transform: none }
+  html { scroll-behavior: auto }
+}
+</style>
+</head>
+<body>
+<canvas id="fete-canvas" hidden aria-hidden="true"></canvas>
+
+<nav class="nav" id="nav" aria-label="Menu principal">
+  <a class="brand" href="#haut"><img src="img/acu.webp" alt=""><b>ACURAST<span>://</span>processors</b></a>
+  <div class="menu" id="menu">
+    <a href="#blocs"><img src="img/blocs.webp" alt="">Blocs</a>
+    <a href="#synthese"><img src="img/acu.webp" alt="">Synthèse</a>
+    <a href="#rentabilite"><img src="img/rentabilite.webp" alt="">Rentabilité</a>
+    <a href="#telephones"><img src="img/telephones.webp" alt="">Téléphones</a>
+    <a href="#classement"><img src="img/classement.webp" alt="">Classement</a>
+    <a href="#jours"><img src="img/jours.webp" alt="">Jours</a>
+    <a href="#evenements"><img src="img/evenements.webp" alt="">Événements</a>
+    <a href="#graphiques"><img src="img/solde.webp" alt="">Graphiques</a>
+    <a href="#releves"><img src="img/releves.webp" alt="">Relevés</a>
+    <button id="cfg-open" type="button" hidden><img src="img/reglages.webp" alt="">Réglages</button>
+  </div>
+  <div class="live">
+    <span class="dot" id="dot"></span>
+    <span id="status">Connexion…</span>
+    <button id="refresh" type="button" aria-label="Actualiser"><span class="ico">⟳</span><span class="txt-btn">Actualiser</span></button>
+    <button class="burger" id="burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menu"><span></span></button>
+  </div>
+</nav>
+
+<header class="hero" id="haut">
+  <div class="hero-img" role="img" aria-label="Chaîne de cubes de verre lumineux contenant des téléphones"></div>
+  <canvas id="reseau" aria-hidden="true"></canvas>
+  <div class="hero-txt">
+    <div class="prompt">&gt; acurast --mainnet --processors</div>
+    <h1>Mes processors Acurast</h1>
+    <div class="sub">Acurast Mainnet · lecture directe de la blockchain</div>
+    <div class="chips">
+      <span class="chip">bloc <b id="h-bloc">–</b></span>
+      <span class="chip">1 bloc toutes les <b>6 s</b></span>
+      <span class="chip">ACU <b id="h-prix">–</b></span>
+      <span class="chip">récompense toutes les <b>90 min</b></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="fete-banner" role="status" hidden>
+    <div class="fete-txt">
+      <strong>Récompense reçue !</strong>
+      <span id="fete-montant"></span>
+    </div>
+    <div class="fete-actions">
+      <button id="fete-replay" type="button">Encore !</button>
+      <button id="fete-close" type="button" aria-label="Fermer">Fermer</button>
+    </div>
+  </div>
+
+  <section class="panel" id="blocs">
+    <h2><img src="img/blocs.webp" alt="">Blocs en direct<span class="tag" id="chaine-etat">connexion…</span></h2>
+    <div class="chaine">
+      <div class="attente"><div class="slot"><div class="bloc prochain" id="prochain">
+        <div class="dessus"></div><div class="cote"></div>
+        <div class="face"></div>
+        <div class="txt"><span class="num">prochain</span><span class="nb" id="prochain-s">~6 s<small>en cours</small></span><span class="age">#<span id="prochain-num">…</span></span></div>
+      </div></div></div>
+      <div class="separateur" aria-hidden="true"></div>
+      <div id="chaine" aria-live="off"></div>
+    </div>
+    <div class="legende">
+      <span><i style="background: linear-gradient(0deg, #6a3cff, #3ee6ff)"></i>remplissage = nombre de transactions</span>
+      <span><i style="background: var(--menthe); box-shadow: 0 0 8px var(--menthe)"></i>badge = un de vos téléphones a écrit dans ce bloc</span>
+    </div>
+  </section>
+
+  <section class="kpis" id="synthese" aria-label="Synthèse">
+    <div class="kpi"><div class="label">Prix de l'ACU</div><div class="val" id="k-price">–</div><div class="note" id="k-price-note">CoinGecko</div></div>
+    <div class="kpi"><div class="label">Solde total</div><div class="val" id="k-total">–</div><div class="note" id="k-total-usd">libre + réserve</div></div>
+    <div class="kpi"><div class="label">Disponible</div><div class="val" id="k-free">–</div><div class="note" id="k-free-usd">solde libre du compte principal</div></div>
+    <div class="kpi"><div class="label">Réserve pour frais</div><div class="val" id="k-hold">–</div><div class="note" id="k-hold-usd">bloquée par ProcessorManager</div></div>
+    <div class="kpi"><div class="label">Autonomie de la réserve</div><div class="val" id="k-auto">–</div><div class="note" id="k-auto-note">calcul en cours</div></div>
+    <div class="kpi"><div class="label">Récompenses reçues</div><div class="val" id="k-gain">–</div><div class="note" id="k-gain-note">depuis le premier relevé</div></div>
+  </section>
+
+  <section class="panel" id="rentabilite">
+    <h2><img src="img/rentabilite.webp" alt="">Rentabilité</h2>
+    <p class="note" id="r-intro">Calcul en cours…</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Poste</th><th>ACU / jour</th><th>$ / jour</th><th>€ / jour</th><th>€ / mois</th></tr></thead>
+      <tbody id="r-rows"></tbody>
+    </table></div>
+    <p class="note" id="r-hyp"></p>
+  </section>
+
+  <section id="telephones">
+    <h2><img src="img/telephones.webp" alt="">Téléphones</h2>
+    <div class="phones" id="phones"></div>
+  </section>
+
+  <section class="panel" id="classement">
+    <h2><img src="img/classement.webp" alt="">Classement des métriques</h2>
+    <p class="note" id="c-intro">Le classement est calculé par le Raspberry Pi toutes les 3 heures (lecture de tout le réseau, environ 7 minutes).</p>
+    <div class="tbl"><table>
+      <thead id="c-head"></thead>
+      <tbody id="c-rows"></tbody>
+    </table></div>
+    <p class="note" id="c-hint"></p>
+  </section>
+
+  <section class="panel" id="jours">
+    <h2><img src="img/jours.webp" alt="">Résumé par jour</h2>
+    <p class="note" id="d-intro">Le résumé quotidien n'est disponible que sur la page servie par le Raspberry Pi.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Jour</th><th>Heures suivies</th><th>Signaux</th><th>Frais (ACU)</th><th>Récompenses (ACU)</th><th>Bilan (ACU)</th><th>Électricité</th><th>Bilan (€)</th></tr></thead>
+      <tbody id="d-rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="panel" id="evenements">
+    <div class="ev-head">
+      <h2><img src="img/evenements.webp" alt="">Événements sur la blockchain</h2>
+      <label class="ev-filter" for="ev-filter">Afficher
+        <select id="ev-filter">
+          <option value="utile">Argent reçu ou dépensé</option>
+          <option value="tout">Tout</option>
+          <option value="presence">Signaux de présence</option>
+          <option value="frais">Frais</option>
+          <option value="recompense">Récompenses</option>
+          <option value="taches">Tâches</option>
+        </select>
+      </label>
+    </div>
+    <p class="note" id="ev-sum">Le journal des événements n'est disponible que sur la page servie par le Raspberry Pi.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Heure</th><th>Compte</th><th>Type</th><th>Montant (ACU)</th><th>Bloc</th></tr></thead>
+      <tbody id="ev-rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="panel" id="graphiques">
+    <div class="ev-head">
+      <h2><img src="img/solde.webp" alt="">Graphiques</h2>
+      <div class="plages" role="group" aria-label="Période affichée">
+        <button type="button" data-plage="24h">24 h</button>
+        <button type="button" data-plage="7j">7 jours</button>
+        <button type="button" data-plage="tout" aria-pressed="true">Tout</button>
+      </div>
+    </div>
+    <div class="graphes">
+      <figure class="graphe">
+        <figcaption><b>Récompenses reçues</b><span id="g-rec-note">un bâton par paiement (toutes les 90 min)</span></figcaption>
+        <div class="g-box" id="g-rec"><svg role="img" aria-label="Récompenses reçues, un bâton par paiement"></svg><div class="g-tip" hidden></div></div>
+      </figure>
+      <figure class="graphe">
+        <figcaption><b>Part de chaque téléphone</b><span>récompense estimée par jour d'après ses métriques</span></figcaption>
+        <div class="g-legende" id="g-tel-leg"></div>
+        <div class="g-box" id="g-tel"><svg role="img" aria-label="Récompense estimée par jour pour chaque téléphone"></svg><div class="g-tip" hidden></div></div>
+      </figure>
+      <figure class="graphe">
+        <figcaption><b>Prix de l'ACU</b><span id="g-prix-note">en dollars, relevé toutes les 5 min</span></figcaption>
+        <div class="g-box" id="g-prix"><svg role="img" aria-label="Prix de l'ACU en dollars"></svg><div class="g-tip" hidden></div></div>
+      </figure>
+      <figure class="graphe" id="solde">
+        <figcaption><b>Solde disponible</b><span>compte principal, en ACU</span></figcaption>
+        <div class="g-box" id="g-solde"><svg role="img" aria-label="Évolution du solde disponible"></svg><div class="g-tip" hidden></div></div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="panel" id="releves">
+    <h2><img src="img/releves.webp" alt="">Relevés</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Heure</th><th>Bloc</th><th>Disponible (ACU)</th><th>Variation</th><th id="tx-heads">Transactions</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+
+  <details class="panel cfg" id="cfg" hidden>
+    <summary><h2><img src="img/reglages.webp" alt="">Réglages</h2></summary>
+    <p class="note">Enregistrés dans <code>config.json</code> sur le Raspberry Pi. Après l'enregistrement, les services redémarrent et la page se recharge (environ 30 s). L'historique des téléphones retirés est conservé.</p>
+    <h3>Électricité</h3>
+    <div class="cfg-grid">
+      <label>Prix du kWh (€ TTC)<input id="cfg-prix" type="number" inputmode="decimal" min="0" max="5" step="0.0001" required></label>
+      <label>Consommation par téléphone (W, à la prise)<input id="cfg-watts" type="number" inputmode="decimal" min="0" max="50" step="0.1" required></label>
+    </div>
+    <h3>Récompenses</h3>
+    <label class="cfg-check"><input id="cfg-feu" type="checkbox"> Feu d'artifice et bandeau « Récompense reçue ! » à chaque nouvelle récompense</label>
+    <h3>Alertes Home Assistant</h3>
+    <label class="cfg-check"><input id="cfg-al-actif" type="checkbox"> Me prévenir quand un téléphone n'envoie plus de signal</label>
+    <div class="cfg-grid" style="margin-top:12px">
+      <label>Délai sans signal avant l'alerte (minutes)<input id="cfg-al-min" type="number" inputmode="numeric" min="40" max="720" step="5"></label>
+      <label>Adresse du webhook Home Assistant<input id="cfg-al-url" type="url" spellcheck="false" autocomplete="off" placeholder="http://homeassistant.local:8123/api/webhook/acurast-…"></label>
+    </div>
+    <div class="cfg-actions">
+      <button id="cfg-al-test" type="button">Envoyer une alerte de test</button>
+      <span id="cfg-al-msg" role="status"></span>
+    </div>
+    <p class="note">Un téléphone envoie normalement un signal toutes les 30 minutes environ. Vous recevez une alerte s'il se tait plus longtemps que le délai, puis une autre quand il repart.</p>
+    <h3>Téléphones</h3>
+    <p class="note">L'adresse du processor se trouve dans l'app Acurast Processor du téléphone (elle commence par 5).</p>
+    <div id="cfg-tels"></div>
+    <div class="cfg-actions">
+      <button id="cfg-add" type="button">+ Ajouter un téléphone</button>
+    </div>
+    <div class="cfg-actions">
+      <button id="cfg-save" class="primary" type="button">Enregistrer</button>
+      <button id="cfg-reset" type="button">Annuler les modifications</button>
+      <span id="cfg-msg" role="status"></span>
+    </div>
+  </details>
+
+  <footer>
+    Actualisation automatique toutes les 60 s. Ouverte depuis le Raspberry Pi, la page affiche l'historique enregistré par le service (un relevé toutes les 5 min) ; ouverte comme simple fichier, elle garde son propre historique dans ce navigateur.
+    Les téléphones n'ont pas de solde propre : leurs frais sont prélevés sur le compte principal.
+    « Tx » = nombre de transactions envoyées (signaux de présence, rapports). Icônes et bandeau générés avec ComfyUI.
+  </footer>
+</main>
+
+<script>
+const RPC = 'https://public-rpc.mainnet.acurast.com';
+const DEC = 1e12;
+// Les comptes (compte principal + téléphones) viennent de config.json, via data/releves.json
+// écrit par le service acurast_releve.py : la page doit être ouverte depuis ce service.
+let MANAGER = null;
+let PHONES = [];
+const SEED = [];
+const KEY = 'acurast-dash-v1';
+const load = () => { try { const h = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(h) && h.length) return h; } catch (e) {} return SEED.slice(); };
+const save = h => { try { localStorage.setItem(KEY, JSON.stringify(h.slice(-2000))); } catch (e) {} };
+let hist = load();
+
+async function rpc(method, params) {
+  const r = await fetch(RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }) });
+  const j = await r.json(); if (j.error) throw new Error(j.error.message); return j.result;
+}
+const leInt = (hex, start, len) => { let v = 0n; for (let i = start + len - 1; i >= start; i--) v = (v << 8n) + BigInt(parseInt(hex.substr(i * 2, 2), 16)); return v; };
+const acu = v => Number(v) / DEC;
+function account(hex) {
+  if (!hex) return { nonce: 0, free: 0 };
+  const h = hex.slice(2);
+  return { nonce: Number(leInt(h, 0, 4)), free: acu(leInt(h, 16, 16)) };
+}
+function holds(hex) {
+  if (!hex) return 0;
+  const h = hex.slice(2); const n = parseInt(h.substr(0, 2), 16) >> 2; let total = 0;
+  for (let i = 0; i < n; i++) total += acu(leInt(h, 1 + i * 18 + 2, 16));
+  return total;
+}
+const fmt = (v, d = 6) => v == null ? '–' : v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const hm = t => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const dhm = t => new Date(t).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+async function poll() {
+  const dot = document.getElementById('dot'), st = document.getElementById('status');
+  try {
+    await serverHistory();   // charge la liste des comptes de config.json si la page vient du Pi
+    if (!MANAGER) {
+      dot.className = 'dot err';
+      st.textContent = location.protocol === 'file:' ? 'Ouvrez la page depuis le service (http://<ip>:8090/)' : 'En attente du premier relevé du service…';
+      return;
+    }
+    const keys = [MANAGER.acc, MANAGER.hold, ...PHONES.map(p => p.acc)];
+    const [vals, head] = await Promise.all([
+      Promise.all(keys.map(k => rpc('state_getStorage', [k]))),
+      rpc('chain_getHeader', []),
+    ]);
+    const m = account(vals[0]);
+    const snap = { t: Date.now(), block: parseInt(head.number, 16), free: m.free, hold: holds(vals[1]),
+      n: PHONES.map((_, i) => account(vals[2 + i]).nonce) };
+    const srv = await serverHistory();
+    if (srv) {
+      // historique tenu par le service du Raspberry Pi, complété par la lecture en direct
+      hist = srv.concat([snap]);
+    } else {
+      const last = hist[hist.length - 1];
+      if (!last || last.free !== snap.free || last.hold !== snap.hold || String(last.n) !== String(snap.n) || snap.t - last.t > 15 * 60e3) hist.push(snap);
+      else hist[hist.length - 1] = { ...last, block: snap.block };
+      save(hist);
+    }
+    render(snap);
+    dot.className = 'dot on';
+    // texte court dans la barre (le n° de bloc est déjà dans le bandeau), détail complet au survol
+    st.textContent = 'À jour à ' + hm(snap.t);
+    st.title = 'Bloc ' + snap.block.toLocaleString('fr-FR') + (srv ? ' · ' + srv.length + ' relevés du Pi' : ' · historique local');
+  } catch (e) {
+    const srv = await serverHistory();
+    if (srv && srv.length) hist = srv;
+    dot.className = 'dot err'; st.textContent = 'Nœud injoignable, nouvel essai dans 60 s';
+    render(null);
+  }
+}
+
+async function serverHistory() {
+  if (location.protocol === 'file:') return null;
+  try {
+    const r = await fetch('data/releves.json', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.electricite) ELEC = { ...ELEC, ...j.electricite };
+    if (j.comptes) {
+      MANAGER = { addr: j.comptes.manager.adresse, acc: j.comptes.manager.cle_compte, hold: j.comptes.manager.cle_reserve };
+      PHONES = j.comptes.telephones.map(t => ({ name: t.nom, addr: t.adresse, acc: t.cle_compte }));
+      document.querySelector('.sub').textContent = PHONES.length + ' téléphone' + (PHONES.length > 1 ? 's' : '') + ' · Acurast Mainnet · lecture directe de la blockchain';
+    }
+    return Array.isArray(j.releves) && j.releves.length ? j.releves : null;
+  } catch (e) { return null; }
+}
+
+function lastChange(i) {
+  // moment où le compteur de transactions du téléphone i a bougé pour la dernière fois
+  for (let k = hist.length - 1; k > 0; k--) {
+    const a = hist[k].n[i], b = hist[k - 1].n[i];
+    if (a != null && b != null && a !== b) return hist[k].t;
+  }
+  return null;
+}
+
+function render(snap) {
+  const cur = snap || hist[hist.length - 1];
+  if (!cur) return;   // aucun relevé pour l'instant
+  const first = hist[0];
+  document.getElementById('k-total').innerHTML = fmt(cur.free + cur.hold, 4) + '<small>ACU</small>';
+  document.getElementById('k-free').innerHTML = fmt(cur.free, 6) + '<small>ACU</small>';
+  document.getElementById('k-hold').innerHTML = fmt(cur.hold, 4) + '<small>ACU</small>';
+  // vraies récompenses : payées par Compute ou reçues (hors remboursements de frais)
+  let g = null, gNote = '';
+  if (COMPUTE || EVENTS) {
+    g = 0;
+    if (COMPUTE) g += COMPUTE.telephones.reduce((s, t) => s + (t.paye || 0), 0);
+    if (EVENTS) for (const e of EVENTS.evenements) if ((e.categorie === 'recompense' || e.categorie === 'credit') && e.montant_acu) g += e.montant_acu;
+    gNote = 'Compute + crédits reçus' + (price ? ' · ' + usd(g) : '');
+  } else {
+    g = cur.free - first.free;
+    gNote = 'hausse du solde depuis le ' + dhm(first.t) + ' (surtout des remboursements de frais)';
+  }
+  const ge = document.getElementById('k-gain');
+  ge.innerHTML = (g > 0 ? '+' : '') + fmt(g, 6) + '<small>ACU</small>';
+  ge.className = 'val ' + (g > 0 ? 'pos' : '');
+  document.getElementById('k-gain-note').textContent = gNote;
+  nouvellesRecompenses();
+  if (price) {
+    document.getElementById('k-total-usd').textContent = '≈ ' + usd(cur.free + cur.hold);
+    document.getElementById('k-free-usd').textContent = '≈ ' + usd(cur.free);
+    document.getElementById('k-hold-usd').textContent = '≈ ' + usd(cur.hold) + ' · ProcessorManager';
+  }
+
+  // consommation de la réserve, mesurée sur les 3 dernières heures de relevés
+  const ref = hist.find(h => cur.t - h.t <= 3 * 3600e3 && h.t < cur.t) || null;
+  const ae = document.getElementById('k-auto'), an = document.getElementById('k-auto-note');
+  if (ref && cur.t - ref.t >= 5 * 60e3 && ref.hold > cur.hold) {
+    const perH = (ref.hold - cur.hold) / ((cur.t - ref.t) / 3600e3);
+    const hrs = cur.hold / perH;
+    ae.innerHTML = (hrs >= 48 ? fmt(hrs / 24, 1) + '<small>jours</small>' : fmt(hrs, 1) + '<small>heures</small>');
+    ae.className = 'val ' + (hrs < 24 ? 'neg' : '');
+    an.textContent = '−' + fmt(perH, 4) + ' ACU/h à ce rythme';
+  } else if (ref && ref.hold <= cur.hold && cur.t - ref.t >= 5 * 60e3) {
+    ae.innerHTML = 'stable'; ae.className = 'val'; an.textContent = 'pas de consommation récente';
+  } else { ae.innerHTML = '–'; an.textContent = 'calcul en cours'; }
+
+  document.getElementById('phones').innerHTML = PHONES.map((p, i) => {
+    const n = cur.n[i];
+    const st = phoneStats(p.name);
+    const cp = COMPUTE ? COMPUTE.telephones.find(t => t.adresse === p.addr) : null;
+    const lc = (cp && cp.dernier_signal_t) || st.dernier || lastChange(i);
+    const age = lc ? (Date.now() - lc) / 60e3 : null;
+    const seuil = st.intervalle ? Math.max(30, st.intervalle * 2) : 45;
+    let cls = 'idle', txt = 'En observation';
+    if (age != null) { if (age < seuil) { cls = 'ok'; txt = 'Actif'; } else if (age < seuil * 2) { cls = 'warn'; txt = 'En retard'; } else { cls = 'bad'; txt = 'Inactif ?'; } }
+    const estJ = cp ? cp.estimation_acu_epoque * COMPUTE.epoques_par_jour : null;
+    const eurJ = v => price && price.eur && v != null ? ' · ' + (v * price.eur).toLocaleString('fr-FR', { maximumFractionDigits: 3 }) + ' €' : '';
+    const pc = v => v == null ? '–' : fmt(v * 100, 1) + ' %';
+    return `<article class="card">
+      <div class="card-top"><div><div class="name">${p.name}</div><div class="addr">${p.addr}</div></div>
+      <span class="pill ${cls}">${txt}</span></div>
+      <dl>
+        <div><dt class="label">Dernier signal</dt><dd>${lc ? hm(lc) + ' (' + Math.round(age) + ' min)' : 'pas encore vu'}</dd></div>
+        <div><dt class="label">Intervalle moyen</dt><dd>${st.intervalle ? fmt(st.intervalle, 0) + ' min' : '–'}</dd></div>
+        <div><dt class="label">Signaux (24 h)</dt><dd>${st.n24}</dd></div>
+        <div><dt class="label">Disponibilité</dt><dd>${pc(st.dispo)}</dd></div>
+        <div><dt class="label">Frais payés</dt><dd>${fmt(st.frais, 4)} ACU</dd></div>
+        <div><dt class="label">Frais par jour</dt><dd>${st.fraisJour == null ? '–' : fmt(st.fraisJour, 3) + ' ACU'}</dd></div>
+        <div><dt class="label">Compute</dt><dd>${cp ? (cp.statut || '–') + ' · v' + (cp.version || '?') : '–'}</dd></div>
+        <div><dt class="label">Récompense estimée</dt><dd>${estJ == null ? '–' : fmt(estJ, 3) + ' ACU/j'}<span class="note">${eurJ(estJ)}</span></dd></div>
+        <div><dt class="label">Déjà payé</dt><dd>${cp ? fmt(cp.paye, 4) + ' ACU' : '–'}</dd></div>
+        <div><dt class="label">Tâches</dt><dd>${st.taches.attribuee} attribuée(s) · ${st.taches.ok} ok · ${st.taches.echec} échec(s)</dd></div>
+        <div><dt class="label">Transactions</dt><dd>${n ?? '–'}</dd></div>
+      </dl>${cp ? metricBars(cp) : ''}</article>`;
+  }).join('');
+
+  renderRentab();
+  renderDaily();
+
+  const th = document.getElementById('tx-heads');
+  if (th) th.outerHTML = PHONES.map((p, i) => `<th>Tx ${p.name.replace('Téléphone', 'tél.')}</th>`).join('');
+  const rows = [];
+  for (let k = hist.length - 1; k >= 0 && rows.length < 200; k--) {
+    const h = hist[k], prev = hist[k - 1];
+    const d = prev ? h.free - prev.free : 0;
+    rows.push(`<tr><td>${dhm(h.t)}</td><td>${h.block ? h.block.toLocaleString('fr-FR') : '–'}</td><td>${fmt(h.free, 6)}</td>
+      <td class="${d > 0 ? 'pos' : d < 0 ? 'neg' : ''}">${prev ? (d >= 0 ? '+' : '') + fmt(d, 6) : '–'}</td>
+      ${PHONES.map((_, i) => `<td>${h.n[i] ?? '–'}</td>`).join('')}</tr>`);
+  }
+  document.getElementById('rows').innerHTML = rows.join('');
+  drawChart();
+}
+
+let ELEC = { prix_kwh_eur: 0.195, watts_par_telephone: 2.0 };
+let EVENTS = null;
+const CATS = {
+  presence: ['Signal de présence', 'idle'], frais: ['Frais payés', 'bad'], remboursement: ['Remboursement de frais', 'info'],
+  reserve_liberee: ['Réserve libérée', 'idle'], prelevement: ['Prélèvement', 'idle'], recompense: ['Récompense', 'ok'],
+  credit: ['Crédit reçu', 'ok'], envoi: ['Envoi', 'warn'], transfert: ['Transfert interne', 'idle'],
+  reserve_ajoutee: ['Réserve ajoutée', 'info'], autre: ['Autre', 'idle'],
+  tache_attribuee: ['Tâche attribuée', 'ok'], tache_rapport: ['Tâche exécutée (rapport)', 'ok'], tache_ok: ['Tâche réussie', 'ok'],
+  tache_echec: ['Tâche échouée', 'bad'], tache_fin: ['Tâche terminée', 'info'],
+};
+const UTILE = new Set(['frais', 'remboursement', 'recompense', 'credit', 'envoi', 'reserve_ajoutee', 'autre',
+  'tache_attribuee', 'tache_rapport', 'tache_ok', 'tache_echec', 'tache_fin']);
+
+async function pollEvents() {
+  if (location.protocol === 'file:') return;
+  try {
+    const r = await fetch('data/evenements.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    EVENTS = await r.json();
+    renderEvents(); render(null);
+  } catch (e) {}
+}
+
+function renderEvents() {
+  if (!EVENTS) return;
+  const f = document.getElementById('ev-filter').value;
+  const list = EVENTS.evenements.filter(e =>
+    f === 'tout' ? true : f === 'utile' ? UTILE.has(e.categorie) : f === 'recompense' ? (e.categorie === 'recompense' || e.categorie === 'credit') :
+    f === 'taches' ? e.categorie.startsWith('tache_') : e.categorie === f);
+  const cnt = {}; for (const e of EVENTS.evenements) cnt[e.categorie] = (cnt[e.categorie] || 0) + 1;
+  const debut = EVENTS.debut_t ? dhm(EVENTS.debut_t) : '?';
+  document.getElementById('ev-sum').textContent =
+    `${EVENTS.total} événements depuis le ${debut} · ${cnt.presence || 0} signaux de présence · ${cnt.frais || 0} frais payés · ` +
+    `${(cnt.recompense || 0) + (cnt.credit || 0)} récompense(s). Le nœud public ne garde que les blocs récents : rien n'est récupérable avant le début du suivi.`;
+  document.getElementById('ev-rows').innerHTML = list.slice(-300).reverse().map(e => {
+    const [lab, cls] = CATS[e.categorie] || [e.module + '.' + e.evenement, 'idle'];
+    const m = e.montant_acu;
+    return `<tr><td>${dhm(e.t)}</td><td>${e.compte || '–'}</td>
+      <td><span class="pill ${cls}" title="${e.module}.${e.evenement}">${lab}</span></td>
+      <td class="${m > 0 ? 'pos' : m < 0 ? 'neg' : ''}">${m == null ? '–' : (m > 0 ? '+' : '') + fmt(m, 6)}</td>
+      <td>${e.bloc.toLocaleString('fr-FR')}</td></tr>`;
+  }).join('') || '<tr><td colspan="5">Aucun événement de ce type pour l’instant.</td></tr>';
+}
+document.getElementById('ev-filter').addEventListener('change', renderEvents);
+
+function renderRentab() {
+  const intro = document.getElementById('r-intro'), body = document.getElementById('r-rows'), hyp = document.getElementById('r-hyp');
+  const nb = PHONES.length;
+  const kwhJour = ELEC.watts_par_telephone * nb * 24 / 1000;
+  const elecEurJour = kwhJour * ELEC.prix_kwh_eur;
+  hyp.textContent = `Électricité : ${nb} téléphones × ${fmt(ELEC.watts_par_telephone, 1)} W en continu = ${fmt(kwhJour, 3)} kWh/jour à ${fmt(ELEC.prix_kwh_eur, 4)} €/kWh. ` +
+    `Converti en ACU au prix actuel. Hypothèse à ajuster dans les Réglages (une prise wattmètre donne la vraie valeur). ` +
+    `Avec le journal des événements : frais = frais réellement payés, récompenses = crédits reçus hors remboursements de frais. Sans lui : hausses du solde disponible et baisses de la réserve.`;
+  // cumuls sur toute la période suivie
+  let gain = 0, frais = 0;
+  for (let k = 1; k < hist.length; k++) {
+    const d = hist[k].free - hist[k - 1].free; if (d > 0) gain += d;
+    const f = hist[k - 1].hold - hist[k].hold; if (f > 0) frais += f;
+  }
+  let heures = hist.length > 1 ? (hist[hist.length - 1].t - hist[0].t) / 3600e3 : 0;
+  let source = 'variations des soldes';
+  const evH = EVENTS && EVENTS.debut_t ? (Date.now() - EVENTS.debut_t) / 3600e3 : 0;
+  if (evH >= 0.5) {
+    // calcul exact à partir des événements : frais nets payés, et seulement les vraies récompenses
+    gain = 0; frais = 0;
+    for (const e of EVENTS.evenements) {
+      if (e.t < EVENTS.debut_t || e.montant_acu == null) continue;
+      if (e.categorie === 'frais') frais += -e.montant_acu;
+      if (e.categorie === 'recompense' || e.categorie === 'credit') gain += e.montant_acu;
+    }
+    heures = evH; source = 'événements de la blockchain';
+  }
+  // Les récompenses tombent par paquets, une fois par époque, après un échauffement sans paiement :
+  // on mesure leur rythme entre le premier et le dernier paiement, pas depuis le début du suivi.
+  let gJ = null, rythme = '';
+  const pay = EVENTS ? EVENTS.evenements.filter(e => (e.categorie === 'recompense' || e.categorie === 'credit') && e.montant_acu > 0).sort((a, b) => a.t - b.t) : [];
+  if (pay.length >= 2) {
+    const epoqueH = COMPUTE ? COMPUTE.blocs_par_epoque * 6 / 3600 : 1.5;
+    const spanH = Math.max((pay[pay.length - 1].t - pay[0].t) / 3600e3, (Date.now() - pay[0].t) / 3600e3 - epoqueH);
+    gJ = pay.slice(1).reduce((s, e) => s + e.montant_acu, 0) / spanH * 24;
+    rythme = `Récompenses : ${pay.length} paiements, en moyenne ${fmt(pay.reduce((s, e) => s + e.montant_acu, 0) / pay.length, 4)} ACU toutes les ${fmt(epoqueH * 60, 0)} min. `;
+  }
+  const eurPerUsd = price && price.eur ? price.eur / price.usd : null;
+  const money = (v, cur) => v == null ? '–' : (v < 0 ? '−' : '') + Math.abs(v).toLocaleString('fr-FR', { minimumFractionDigits: Math.abs(v) < 0.1 ? 4 : 2, maximumFractionDigits: Math.abs(v) < 0.1 ? 4 : 2 }) + ' ' + cur;
+  const row = (label, acuJ, eurJ, cls = '') => {
+    const usdJ = eurJ != null && eurPerUsd ? eurJ / eurPerUsd : null;
+    return `<tr class="${cls}"><td>${label}</td><td>${acuJ == null ? '–' : fmt(acuJ, 5)}</td><td>${money(usdJ, '$')}</td><td>${money(eurJ, '€')}</td><td>${money(eurJ == null ? null : eurJ * 30, '€')}</td></tr>`;
+  };
+  if (heures < 0.5) {
+    intro.textContent = 'Pas encore assez de relevés : il faut au moins 30 minutes de suivi.';
+    body.innerHTML = row('Électricité (estimation)', null, -elecEurJour, 'neg');
+    return;
+  }
+  if (gJ == null) gJ = gain / heures * 24;
+  const fJ = frais / heures * 24;
+  const eur = acu => price && price.eur ? acu * price.eur : null;
+  // l'électricité se paie en euros : on la convertit en ACU au prix du moment pour que les colonnes soient cohérentes
+  const elecAcu = price && price.eur ? elecEurJour / price.eur : null;
+  const net = eur(gJ - fJ) == null ? null : eur(gJ - fJ) - elecEurJour;
+  intro.textContent = `Rythme actuel ramené à 24 h (${source}). Reçu depuis le début du suivi (${fmt(heures, 1)} h) : ${fmt(gain, 6)} ACU de récompenses, ${fmt(frais, 6)} ACU de frais. ` +
+    rythme + (heures < 24 ? 'Moins d’une journée de données : les chiffres vont encore bouger.' : '');
+  body.innerHTML =
+    row('Récompenses', gJ, eur(gJ), 'pos') +
+    row('Frais réseau', -fJ, eur(-fJ), 'neg') +
+    row('Électricité (estimation)', elecAcu == null ? null : -elecAcu, -elecEurJour, 'neg') +
+    netRow('Bilan net mesuré', elecAcu == null ? null : gJ - fJ - elecAcu, net);
+  if (COMPUTE) {
+    const cJ = COMPUTE.telephones.reduce((s, t) => s + t.estimation_acu_epoque, 0) * COMPUTE.epoques_par_jour;
+    const netE = eur(cJ - fJ) == null ? null : eur(cJ - fJ) - elecEurJour;
+    body.innerHTML += `<tr><td colspan="5" class="label" style="text-align:left;padding-top:16px">Pour comparaison : estimation d’après les métriques des téléphones</td></tr>` +
+      row('Récompenses attendues (métriques)', cJ, eur(cJ), 'pos') +
+      netRow('Bilan net attendu', elecAcu == null ? null : cJ - fJ - elecAcu, netE);
+  }
+  function netRow(label, acu, n) {
+    const c = n >= 0 ? 'pos' : 'neg';
+    return `<tr><td><strong>${label}</strong></td><td class="${c}"><strong>${fmt(acu, 5)}</strong></td>` +
+      `<td class="${c}"><strong>${money(n != null && eurPerUsd ? n / eurPerUsd : null, '$')}</strong></td>` +
+      `<td class="${c}"><strong>${money(n, '€')}</strong></td>` +
+      `<td class="${c}"><strong>${money(n == null ? null : n * 30, '€')}</strong></td></tr>`;
+  }
+}
+
+function renderDaily() {
+  if (!EVENTS || !EVENTS.par_jour) return;
+  const now = Date.now(), debut = EVENTS.debut_t || now;
+  const wKw = ELEC.watts_par_telephone * PHONES.length / 1000;
+  const days = Object.keys(EVENTS.par_jour).sort();
+  const lines = days.map(j => {
+    const d0 = new Date(j + 'T00:00:00').getTime();
+    const h = Math.max(0, (Math.min(d0 + 864e5, now) - Math.max(d0, debut)) / 3600e3);
+    const m = EVENTS.par_jour[j].montants || {}, n = EVENTS.par_jour[j].nombre || {};
+    const frais = -(m.frais || 0), rec = (m.recompense || 0) + (m.credit || 0);
+    const elec = wKw * h * ELEC.prix_kwh_eur;
+    return { j, d0, h, sig: n.presence || 0, frais, rec, bilan: rec - frais, elec };
+  });
+  const eur = v => price && price.eur ? v * price.eur : null;
+  const money = v => v == null ? '–' : (v < 0 ? '−' : '+') + Math.abs(v).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €';
+  const tr = (label, x, strong) => {
+    const be = eur(x.bilan) == null ? null : eur(x.bilan) - x.elec;
+    const w = s => strong ? `<strong>${s}</strong>` : s;
+    return `<tr><td>${w(label)}</td><td>${fmt(x.h, 1)} h</td><td>${x.sig}</td><td class="neg">${x.frais ? '−' + fmt(x.frais, 4) : '0'}</td>` +
+      `<td class="${x.rec > 0 ? 'pos' : ''}">${x.rec ? '+' + fmt(x.rec, 4) : '0'}</td>` +
+      `<td class="${x.bilan >= 0 ? 'pos' : 'neg'}">${w((x.bilan >= 0 ? '+' : '') + fmt(x.bilan, 4))}</td>` +
+      `<td>${'−' + fmt(x.elec, 3)} €</td><td class="${be >= 0 ? 'pos' : 'neg'}">${w(money(be))}</td></tr>`;
+  };
+  const sum = arr => arr.reduce((a, x) => ({ h: a.h + x.h, sig: a.sig + x.sig, frais: a.frais + x.frais, rec: a.rec + x.rec, bilan: a.bilan + x.bilan, elec: a.elec + x.elec }),
+    { h: 0, sig: 0, frais: 0, rec: 0, bilan: 0, elec: 0 });
+  const week = sum(lines.filter(x => now - x.d0 < 7 * 864e5));
+  const month = sum(lines.filter(x => new Date(x.d0).getMonth() === new Date(now).getMonth() && new Date(x.d0).getFullYear() === new Date(now).getFullYear()));
+  const dayName = d => new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  // les totaux sur 7 jours et sur le mois n'apparaissent que lorsqu'ils couvrent autre chose que le total général
+  const total = sum(lines);
+  const debutMois = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), 1).getTime();
+  document.getElementById('d-rows').innerHTML =
+    lines.slice(-31).reverse().map(x => tr(dayName(x.d0), x)).join('') +
+    (now - debut > 7 * 864e5 ? tr('7 derniers jours', week, true) : '') +
+    (debut < debutMois ? tr('Ce mois-ci', month, true) : '') +
+    tr('Depuis le début (' + dayName(debut) + ')', total, true);
+  document.getElementById('d-intro').textContent =
+    'Montants réels tirés du journal des événements. Le bilan en euros utilise le prix actuel de l’ACU et l’électricité estimée sur les heures suivies. Aussi enregistré dans data/resume_quotidien.csv sur le Pi.';
+}
+
+// ---- Feu d'artifice à chaque nouvelle récompense (désactivable dans les Réglages) ----
+// Repère : l'heure de la dernière récompense déjà fêtée dans ce navigateur. À la première visite,
+// on note la dernière récompense existante sans rien déclencher.
+const FETE_KEY = 'acurast-derniere-recompense-fetee';
+let FETE_ACTIVE = true;
+let FETE_CONNUE = location.protocol === 'file:';   // attend le réglage du Pi avant de déclencher quoi que ce soit
+let feteEnCours = false;
+function nouvellesRecompenses() {
+  if (!EVENTS || !FETE_CONNUE) return;
+  const rec = EVENTS.evenements.filter(e => (e.categorie === 'recompense' || e.categorie === 'credit') && e.montant_acu > 0);
+  if (!rec.length) return;
+  const derniere = Math.max(...rec.map(e => e.t));
+  let vu = null;
+  try { vu = Number(localStorage.getItem(FETE_KEY)) || null; } catch (e) {}
+  if (vu != null && derniere <= vu) return;
+  try { localStorage.setItem(FETE_KEY, String(derniere)); } catch (e) {}
+  if (vu == null || !FETE_ACTIVE) return;
+  celebrate(rec.filter(e => e.t > vu).reduce((s, e) => s + e.montant_acu, 0));
+}
+function celebrate(total, force) {
+  if (!force && (!(total > 0) || feteEnCours)) return;
+  feteEnCours = true;
+  const b = document.getElementById('fete-banner');
+  document.getElementById('fete-montant').textContent = '+' + fmt(total, 6) + ' ACU' + (price ? ' (' + usd(total) + ')' : '');
+  b.hidden = false;
+  fireworks(force ? 8000 : 12000);
+}
+
+function fireworks(duree) {
+  const cv = document.getElementById('fete-canvas');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) return;
+  cv.hidden = false;
+  const ctx = cv.getContext('2d');
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const size = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  size(); addEventListener('resize', size);
+  const COLORS = ['#3ee6ff', '#a06bff', '#3cf2a6', '#ffc857', '#ff5c8a', '#ffffff', '#7c5cff'];
+  const rockets = [], sparks = [];
+  const fin = performance.now() + duree;
+  let nextLaunch = 0;
+  function launch() {
+    const x = innerWidth * (0.15 + Math.random() * 0.7);
+    rockets.push({ x, y: innerHeight, vx: (Math.random() - 0.5) * 1.5, vy: -(9 + Math.random() * 4),
+      cible: innerHeight * (0.15 + Math.random() * 0.35), c: COLORS[Math.floor(Math.random() * COLORS.length)] });
+  }
+  function boum(r) {
+    const n = 70 + Math.floor(Math.random() * 50), c2 = COLORS[Math.floor(Math.random() * COLORS.length)];
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI * 2 * i / n, v = 2 + Math.random() * 4.5;
+      sparks.push({ x: r.x, y: r.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, decay: 0.008 + Math.random() * 0.012,
+        c: Math.random() < 0.7 ? r.c : c2 });
+    }
+  }
+  function frame(t) {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(0, 0, innerWidth, innerHeight);
+    ctx.globalCompositeOperation = 'lighter';
+    if (t < fin && t > nextLaunch) { launch(); if (Math.random() < 0.4) launch(); nextLaunch = t + 250 + Math.random() * 450; }
+    for (let i = rockets.length - 1; i >= 0; i--) {
+      const r = rockets[i];
+      r.x += r.vx; r.y += r.vy; r.vy += 0.12;
+      ctx.fillStyle = r.c; ctx.beginPath(); ctx.arc(r.x, r.y, 2.2, 0, 7); ctx.fill();
+      if (r.y <= r.cible || r.vy >= 0) { boum(r); rockets.splice(i, 1); }
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.x += s.vx; s.y += s.vy; s.vx *= 0.985; s.vy = s.vy * 0.985 + 0.05; s.life -= s.decay;
+      if (s.life <= 0) { sparks.splice(i, 1); continue; }
+      ctx.globalAlpha = s.life; ctx.fillStyle = s.c;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 1.8, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (t < fin || rockets.length || sparks.length) requestAnimationFrame(frame);
+    else { ctx.clearRect(0, 0, innerWidth, innerHeight); cv.hidden = true; removeEventListener('resize', size); feteEnCours = false; }
+  }
+  requestAnimationFrame(frame);
+}
+
+document.getElementById('fete-close').addEventListener('click', () => { document.getElementById('fete-banner').hidden = true; });
+document.getElementById('fete-replay').addEventListener('click', () => fireworks(6000));
+// démo : ouvrir la page avec #feu-artifice dans l'adresse
+if (location.hash === '#feu-artifice') setTimeout(() => celebrate(0.026832, true), 800);
+
+let RANK = null;
+async function pollRank() {
+  if (location.protocol === 'file:') return;
+  try {
+    const r = await fetch('data/classement.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    RANK = await r.json(); renderRank();
+  } catch (e) {}
+}
+
+function metricValue(nom, v) {
+  if (/ram|storage/.test(nom)) return fmt(v / 1024 ** 3, 1) + ' Go';
+  if (v >= 1e6) return fmt(v / 1e6, 1) + ' M';
+  if (v >= 1e3) return fmt(v / 1e3, 1) + ' k';
+  return fmt(v, 0);
+}
+
+function renderRank() {
+  if (!RANK || !RANK.metriques) return;
+  const noms = PHONES.map(p => p.name);
+  document.getElementById('c-head').innerHTML = `<tr><th>Métrique</th><th>Poids</th>` +
+    noms.map(n => `<th>${n}</th>`).join('') + `<th>Médiane réseau</th><th>Top 10 %</th></tr>`;
+  const order = ['v1_ram_total', 'v1_cpu_multi_core', 'v1_cpu_single_core', 'v1_storage_avail'];
+  const keys = Object.keys(RANK.metriques).sort((a, b) => (order.indexOf(a) + 99) % 99 - (order.indexOf(b) + 99) % 99);
+  const prev = RANK.precedent ? RANK.precedent.rangs : null;
+  let faible = null;
+  document.getElementById('c-rows').innerHTML = keys.map(k => {
+    const m = RANK.metriques[k];
+    const cells = noms.map(n => {
+      const t = m.telephones[n];
+      if (!t) return '<td>–</td>';
+      const pct = t.meilleur_que_pct;
+      const cls = pct >= 75 ? 'ok' : pct >= 40 ? 'info' : pct >= 15 ? 'warn' : 'bad';
+      let tend = '';
+      const pr = prev && prev[k] && prev[k][n];
+      if (pr) {
+        const d = pr - t.rang;   // positif = gagne des places
+        const seuil = Math.max(1, m.actifs * 0.002);
+        tend = Math.abs(d) < seuil ? '<span class="trend">=</span>' :
+          d > 0 ? `<span class="trend pos">▲ ${d.toLocaleString('fr-FR')}</span>` : `<span class="trend neg">▼ ${(-d).toLocaleString('fr-FR')}</span>`;
+      }
+      if (!faible || pct < faible.pct) faible = { pct, n, k };
+      return `<td><div class="rk"><span class="pill ${cls}">meilleur que ${fmt(pct, 0)} %</span>${tend}</div>
+        <div class="rk-sub">${metricValue(k, t.valeur)} · n° ${t.rang.toLocaleString('fr-FR')}</div></td>`;
+    }).join('');
+    return `<tr><td>${METRIC_NAMES[k] || k}</td><td>${fmt(m.poids * 100, 0)} %</td>${cells}` +
+      `<td>${metricValue(k, m.mediane)}</td><td>${metricValue(k, m.top10)}</td></tr>`;
+  }).join('');
+  const actifs = Math.max(...keys.map(k => RANK.metriques[k].actifs));
+  document.getElementById('c-intro').textContent =
+    `Comparaison avec ${actifs.toLocaleString('fr-FR')} téléphones actifs sur le réseau · époque ${RANK.epoque} · calculé le ${dhm(RANK.t)}` +
+    (RANK.precedent ? ` · tendance par rapport au ${dhm(RANK.precedent.t)}` : '') + '.';
+  const conseils = {
+    v1_cpu_multi_core: 'Une baisse en CPU signale souvent un téléphone qui chauffe : aérez-le, enlevez la coque, éloignez-le du chargeur.',
+    v1_cpu_single_core: 'Une baisse en CPU signale souvent un téléphone qui chauffe : aérez-le, enlevez la coque, éloignez-le du chargeur.',
+    v1_storage_avail: 'Libérer de l’espace (photos, applications, caches) fait monter cette métrique.',
+    v1_ram_total: 'La RAM dépend du modèle de téléphone : rien à régler, c’est le critère à regarder pour un futur téléphone.',
+  };
+  document.getElementById('c-hint').textContent = faible ?
+    `Point le plus faible : ${METRIC_NAMES[faible.k] || faible.k} du ${faible.n}. ${conseils[faible.k] || ''}` : '';
+}
+
+let COMPUTE = null;
+async function pollCompute() {
+  if (location.protocol === 'file:') return;
+  try {
+    const r = await fetch('data/compute.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    COMPUTE = await r.json(); render(null);
+  } catch (e) {}
+}
+
+function phoneStats(name) {
+  const out = { intervalle: null, n24: 0, dispo: null, frais: 0, fraisJour: null, dernier: null, taches: { attribuee: 0, ok: 0, echec: 0 } };
+  if (!EVENTS) return out;
+  const evs = EVENTS.evenements.filter(e => e.compte === name);
+  const hb = evs.filter(e => e.categorie === 'presence').map(e => e.t).sort((a, b) => a - b);
+  const now = Date.now();
+  out.n24 = hb.filter(t => now - t < 864e5).length;
+  out.dernier = hb.length ? hb[hb.length - 1] : null;
+  if (hb.length >= 2) {
+    const gaps = hb.slice(1).map((t, k) => (t - hb[k]) / 60e3).sort((a, b) => a - b);
+    out.intervalle = gaps[Math.floor(gaps.length / 2)];   // médiane, en minutes
+  }
+  const debut = EVENTS.debut_t || (hb[0] ?? now);
+  const fenetre = (now - debut) / 60e3;
+  if (out.intervalle && hb.length >= 3 && fenetre > 60) {
+    // temps « perdu » = part des trous qui dépasse 2× l'intervalle normal
+    const pts = [debut, ...hb, now];
+    let perdu = 0;
+    for (let k = 1; k < pts.length; k++) perdu += Math.max(0, (pts[k] - pts[k - 1]) / 60e3 - 2 * out.intervalle);
+    out.dispo = Math.max(0, 1 - perdu / fenetre);
+  }
+  for (const e of evs) {
+    if (e.categorie === 'frais' && e.montant_acu) out.frais += -e.montant_acu;
+    if (e.categorie === 'tache_attribuee') out.taches.attribuee++;
+    if (e.categorie === 'tache_ok' || e.categorie === 'tache_rapport') out.taches.ok++;
+    if (e.categorie === 'tache_echec') out.taches.echec++;
+  }
+  if (fenetre > 30) out.fraisJour = out.frais / fenetre * 1440;
+  return out;
+}
+
+const METRIC_NAMES = { v1_cpu_single_core: 'CPU 1 cœur', v1_cpu_multi_core: 'CPU multicœur', v1_ram_total: 'Mémoire', v1_storage_avail: 'Stockage' };
+function metricBars(cp) {
+  const ent = Object.entries(cp.metriques || {});
+  if (!ent.length) return '';
+  const max = Math.max(...ent.map(([, m]) => m.acu_par_epoque)) || 1;
+  return `<div class="metrics"><div class="label">D’où vient la récompense estimée (ACU par époque de 90 min)</div>` +
+    ent.map(([k, m]) => `<div class="mrow"><span>${METRIC_NAMES[k] || k}</span>
+      <span class="bar"><i style="width:${(m.acu_par_epoque / max * 100).toFixed(1)}%"></i></span>
+      <span class="mval">${fmt(m.acu_par_epoque, 4)}</span></div>`).join('') + `</div>`;
+}
+
+
+let price = null;
+const usd = v => (v < 0 ? '−' : '') + '$' + Math.abs(v * price.usd).toLocaleString('fr-FR', { minimumFractionDigits: Math.abs(v * price.usd) < 0.01 ? 5 : 2, maximumFractionDigits: Math.abs(v * price.usd) < 0.01 ? 5 : 2 });
+async function pollPrice() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=acurast&vs_currencies=usd,eur&include_24hr_change=true');
+    const j = (await r.json()).acurast;
+    if (!j || j.usd == null) throw new Error('prix absent');
+    price = { usd: j.usd, eur: j.eur, ch: j.usd_24h_change, t: Date.now() };
+    document.getElementById('h-prix').textContent = '$' + j.usd.toLocaleString('fr-FR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    document.getElementById('k-price').innerHTML = '$' + price.usd.toLocaleString('fr-FR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    const ch = price.ch;
+    const n = document.getElementById('k-price-note');
+    n.innerHTML = (ch != null ? `<span class="${ch >= 0 ? 'pos' : 'neg'}">${ch >= 0 ? '+' : ''}${ch.toFixed(1)} % sur 24 h</span> · ` : '') + 'CoinGecko ' + hm(price.t);
+    render(null);
+  } catch (e) {
+    document.getElementById('k-price-note').textContent = 'prix indisponible (CoinGecko)';
+  }
+}
+pollPrice();
+setInterval(pollPrice, 5 * 60e3);
+pollEvents();
+setInterval(pollEvents, 60e3);
+pollCompute();
+setInterval(pollCompute, 120e3);
+pollRank();
+setInterval(pollRank, 10 * 60e3);
+document.getElementById('refresh').addEventListener('click', () => { poll(); pollPrice(); });
+window.addEventListener('resize', drawChart);
+
+// ---- Réglages (électricité, téléphones) : lus et écrits via l'API du service de relevé sur le Pi ----
+const adrOk = a => /^5[1-9A-HJ-NP-Za-km-z]{45,47}$/.test(a);   // contrôle rapide ; le Pi vérifie la somme de contrôle
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let cfgInit = null;
+function cfgLigne(t, i) {
+  return `<div class="cfg-tel">
+    <label>Nom<input class="cfg-nom" maxlength="40" value="${esc(t.nom)}" required></label>
+    <label class="cfg-adr">Adresse du processor<input class="cfg-adresse" value="${esc(t.adresse)}" spellcheck="false" autocomplete="off" placeholder="5…" required></label>
+    <button type="button" class="danger cfg-del" data-i="${i}" aria-label="Retirer ${esc(t.nom)}">Retirer</button>
+  </div>`;
+}
+function cfgLire() {
+  return {
+    electricite: { prix_kwh_eur: parseFloat(document.getElementById('cfg-prix').value.replace(',', '.')),
+                   watts_par_telephone: parseFloat(document.getElementById('cfg-watts').value.replace(',', '.')) },
+    telephones: [...document.querySelectorAll('.cfg-tel')].map(d => ({
+      nom: d.querySelector('.cfg-nom').value.trim(), adresse: d.querySelector('.cfg-adresse').value.trim() })),
+    feu_artifice: document.getElementById('cfg-feu').checked,
+    alertes: { actif: document.getElementById('cfg-al-actif').checked,
+               silence_minutes: parseInt(document.getElementById('cfg-al-min').value, 10) || 75,
+               webhook: document.getElementById('cfg-al-url').value.trim() },
+  };
+}
+function cfgAfficher(c) {
+  document.getElementById('cfg-prix').value = c.electricite.prix_kwh_eur;
+  document.getElementById('cfg-watts').value = c.electricite.watts_par_telephone;
+  document.getElementById('cfg-tels').innerHTML = c.telephones.map(cfgLigne).join('');
+  document.getElementById('cfg-feu').checked = c.feu_artifice;
+  document.getElementById('cfg-al-actif').checked = c.alertes.actif;
+  document.getElementById('cfg-al-min').value = c.alertes.silence_minutes;
+  document.getElementById('cfg-al-url').value = c.alertes.webhook;
+}
+function cfgMsg(txt, cls) { const m = document.getElementById('cfg-msg'); m.textContent = txt; m.className = cls || ''; }
+async function cfgCharger() {
+  if (location.protocol === 'file:') return;
+  try {
+    const r = await fetch('api/config', { cache: 'no-store' });
+    if (!r.ok) return;
+    const c = await r.json();
+    cfgInit = { electricite: { prix_kwh_eur: c.electricite.prix_kwh_eur ?? 0.2, watts_par_telephone: c.electricite.watts_par_telephone ?? 4 },
+                telephones: c.telephones.map(t => ({ nom: t.nom, adresse: t.adresse })), feu_artifice: c.feu_artifice !== false,
+                alertes: { actif: !!(c.alertes && c.alertes.actif), silence_minutes: (c.alertes && c.alertes.silence_minutes) || 75, webhook: (c.alertes && c.alertes.webhook) || '' } };
+    FETE_ACTIVE = cfgInit.feu_artifice;
+    FETE_CONNUE = true;
+    nouvellesRecompenses();
+    cfgAfficher(cfgInit);
+    document.getElementById('cfg').hidden = false;
+    document.getElementById('cfg-open').hidden = false;
+  } catch (e) {}
+}
+document.getElementById('cfg-open').addEventListener('click', () => {
+  const d = document.getElementById('cfg'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+document.getElementById('cfg-add').addEventListener('click', () => {
+  const c = cfgLire();
+  c.telephones.push({ nom: 'Téléphone ' + (c.telephones.length + 1), adresse: '' });
+  cfgAfficher(c);
+  const champs = document.querySelectorAll('.cfg-adresse'); champs[champs.length - 1].focus();
+});
+document.getElementById('cfg-tels').addEventListener('click', e => {
+  const b = e.target.closest('.cfg-del'); if (!b) return;
+  const c = cfgLire();
+  if (c.telephones.length <= 1) return cfgMsg('Il faut garder au moins un téléphone.', 'err');
+  const t = c.telephones[+b.dataset.i];
+  if (t.adresse && !confirm(`Retirer « ${t.nom} » du suivi ? (son historique est conservé)`)) return;
+  c.telephones.splice(+b.dataset.i, 1);
+  cfgAfficher(c);
+});
+document.getElementById('cfg-tels').addEventListener('input', e => {
+  if (e.target.classList.contains('cfg-adresse')) e.target.setAttribute('aria-invalid', e.target.value.trim() && !adrOk(e.target.value.trim()) ? 'true' : 'false');
+});
+document.getElementById('cfg-al-test').addEventListener('click', async () => {
+  const m = document.getElementById('cfg-al-msg'), b = document.getElementById('cfg-al-test');
+  const a = cfgLire().alertes;
+  b.disabled = true; m.className = ''; m.textContent = 'Envoi…';
+  try {
+    const r = await fetch('api/test-alerte', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erreur || 'erreur ' + r.status);
+    m.className = 'ok'; m.textContent = 'Envoyée à Home Assistant : regardez votre iPhone.';
+  } catch (e) { m.className = 'err'; m.textContent = 'Échec : ' + e.message; }
+  b.disabled = false;
+});
+document.getElementById('cfg-reset').addEventListener('click', () => { if (cfgInit) { cfgAfficher(cfgInit); cfgMsg(''); } });
+document.getElementById('cfg-save').addEventListener('click', async () => {
+  const c = cfgLire(), btn = document.getElementById('cfg-save');
+  if (!(c.electricite.prix_kwh_eur >= 0 && c.electricite.prix_kwh_eur <= 5)) return cfgMsg('Prix du kWh invalide.', 'err');
+  if (!(c.electricite.watts_par_telephone >= 0 && c.electricite.watts_par_telephone <= 50)) return cfgMsg('Consommation invalide.', 'err');
+  const mauvais = c.telephones.find(t => !t.nom || !adrOk(t.adresse));
+  if (mauvais) return cfgMsg(`« ${mauvais.nom || 'sans nom'} » : nom ou adresse invalide.`, 'err');
+  if (JSON.stringify(c) === JSON.stringify(cfgInit)) return cfgMsg('Rien à enregistrer.', '');
+  btn.disabled = true; cfgMsg('Enregistrement…');
+  try {
+    const r = await fetch('api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erreur || 'erreur ' + r.status);
+    cfgInit = c;
+    FETE_ACTIVE = c.feu_artifice;
+    if (!FETE_ACTIVE) document.getElementById('fete-banner').hidden = true;
+    if (!j.services || !j.services.length) { cfgMsg('Enregistré.', 'ok'); btn.disabled = false; return; }
+    const avert = j.inactifs && j.inactifs.length ? ` Attention : ${j.inactifs.join(', ')} n'a encore aucune transaction sur la blockchain, vérifiez l'adresse.` : '';
+    cfgMsg('Enregistré. Les services redémarrent, la page se recharge dans 30 s.' + avert, 'ok');
+    setTimeout(() => location.reload(), avert ? 45e3 : 30e3);
+  } catch (e) {
+    cfgMsg('Non enregistré : ' + e.message, 'err');
+    btn.disabled = false;
+  }
+});
+cfgCharger();
+render(null);
+poll();
+setInterval(poll, 60e3);
+
+
+// ==================== Graphiques (survol = valeurs exactes, filtre de période commun) ====================
+const COULEURS_TEL = ['#119fbd', '#9a66ff', '#c4862a'];   // validées pour le fond sombre et les daltoniens
+let SERIE_COMPUTE = null, PLAGE = 'tout';
+const barre = (bx, by, bw, bh) => { const r = Math.max(0, Math.min(4, bw / 2, bh)); return `M${bx},${by + bh}V${by + r}Q${bx},${by} ${bx + r},${by}H${bx + bw - r}Q${bx + bw},${by} ${bx + bw},${by + r}V${by + bh}Z`; };
+function etiquetteTemps(t, duree) {
+  const d = new Date(t);
+  return duree > 36 * 3600e3 ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+function plusProche(points, t) { let b = null; for (const p of points) if (!b || Math.abs(p[0] - t) < Math.abs(b[0] - t)) b = p; return b; }
+function graphe(id, o) {
+  const box = document.getElementById(id), svg = box.querySelector('svg'), tip = box.querySelector('.g-tip');
+  const W = Math.max(svg.clientWidth || 600, 200), H = 200, L = 58, R = o.labelsFin ? 64 : 12, T = 10, B = 24;
+  const pts = o.series.flatMap(s => s.points);
+  box.onpointermove = box.onpointerdown = box.onpointerleave = null; tip.hidden = true;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  if (pts.length < (o.type === 'barres' ? 1 : 2)) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">Pas encore assez de données pour cette période</text>`; return;
+  }
+  let tMin = Math.min(...pts.map(p => p[0])), tMax = Math.max(...pts.map(p => p[0]));
+  if (o.type === 'barres') { tMin -= 45 * 60e3; tMax += 45 * 60e3; }
+  if (tMax === tMin) tMax = tMin + 60e3;
+  let vMax = Math.max(...pts.map(p => p[1])), vMin = o.zero ? 0 : Math.min(...pts.map(p => p[1]));
+  const marge = (vMax - vMin) * .12 || Math.abs(vMax) * .05 || 1e-6;
+  if (!o.zero) vMin = (vMin >= 0 && vMin - marge < 0) ? 0 : vMin - marge;   // pas d'axe sous zéro pour des valeurs positives
+  vMax += marge;
+  const x = t => L + (t - tMin) / (tMax - tMin) * (W - L - R), y = v => T + (1 - (v - vMin) / (vMax - vMin)) * (H - T - B);
+  let g = '';
+  for (let k = 0; k <= 3; k++) {
+    const v = vMin + (vMax - vMin) * k / 3;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${o.axe(v)}</text>`;
+  }
+  for (let k = 0; k <= 3; k++) {
+    const t = tMin + (tMax - tMin) * k / 3;
+    g += `<text x="${x(t)}" y="${H - 5}" text-anchor="${k === 0 ? 'start' : k === 3 ? 'end' : 'middle'}">${etiquetteTemps(t, tMax - tMin)}</text>`;
+  }
+  if (o.type === 'barres') {
+    const s = o.series[0], n = s.points.length;
+    const bw = Math.max(3, Math.min(16, (W - L - R) / n - 2));   // 2 px d'écart minimum entre bâtons
+    for (const p of s.points) g += `<path d="${barre(x(p[0]) - bw / 2, y(p[1]), bw, y(vMin) - y(p[1]))}" fill="${s.couleur}"/>`;
+  } else {
+    for (const s of o.series) {
+      if (!s.points.length) continue;
+      if (o.aire) g += `<path d="M${x(s.points[0][0])},${y(vMin)}` + s.points.map(p => `L${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('') + `L${x(s.points[s.points.length - 1][0])},${y(vMin)}Z" fill="${s.couleur}" fill-opacity=".12"/>`;
+      g += `<path d="${s.points.map((p, i) => (i ? 'L' : 'M') + x(p[0]).toFixed(1) + ',' + y(p[1]).toFixed(1)).join('')}" fill="none" stroke="${s.couleur}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if (o.labelsFin) { const lp = s.points[s.points.length - 1]; g += `<text x="${x(lp[0]) + 8}" y="${y(lp[1]) + 4}" style="fill:var(--fg)">${esc(s.court || s.nom)}</text>`; }
+    }
+  }
+  svg.innerHTML = g + '<g class="g-survol"></g>';
+  const survol = svg.querySelector('.g-survol');
+  const instants = [...new Set(pts.map(p => p[0]))].sort((a, b) => a - b);
+  const montrer = ev => {
+    const r = svg.getBoundingClientRect(), mx = (ev.clientX - r.left) * W / r.width;
+    let best = instants[0];
+    for (const t of instants) if (Math.abs(x(t) - mx) < Math.abs(x(best) - mx)) best = t;
+    const vals = o.series.map(s => ({ s, p: plusProche(s.points, best) })).filter(v => v.p);
+    let h = `<line x1="${x(best)}" x2="${x(best)}" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+    for (const v of vals) h += o.type === 'barres'
+      ? `<path d="${barre(x(v.p[0]) - 6, y(v.p[1]), 12, y(vMin) - y(v.p[1]))}" fill="none" stroke="var(--fg)" stroke-width="1.5"/>`
+      : `<circle cx="${x(v.p[0])}" cy="${y(v.p[1])}" r="5" fill="${v.s.couleur}" stroke="var(--surface-solid)" stroke-width="2"/>`;
+    survol.innerHTML = h;
+    tip.innerHTML = `<div class="g-tip-t">${dhm(best)}</div>` + o.infobulle(vals);
+    tip.hidden = false;
+    const px = x(best) / W * r.width, demi = tip.offsetWidth / 2 + 4;
+    tip.style.left = Math.min(Math.max(px, demi), r.width - demi) + 'px';
+  };
+  box.onpointermove = box.onpointerdown = montrer;
+  box.onpointerleave = () => { survol.innerHTML = ''; tip.hidden = true; };
+}
+function dessinerGraphes() {
+  const now = Date.now(), t0 = PLAGE === '24h' ? now - 864e5 : PLAGE === '7j' ? now - 7 * 864e5 : 0;
+  const usdTxt = v => price ? ' · ' + usd(v) : '';
+  // 1. récompenses : un bâton par paiement
+  const rec = ((EVENTS && EVENTS.recompenses) || []).filter(p => p[0] >= t0).map(p => [p[0], p[1]]);
+  const totRec = rec.reduce((a, p) => a + p[1], 0);
+  document.getElementById('g-rec-note').textContent = rec.length ? `${rec.length} paiements · ${fmt(totRec, 4)} ACU au total${usdTxt(totRec)}` : 'un bâton par paiement (toutes les 90 min)';
+  graphe('g-rec', { type: 'barres', zero: true, series: [{ nom: 'Récompense', couleur: '#2aa982', points: rec }],
+    axe: v => fmt(v, 3), infobulle: v => `<b>+${fmt(v[0].p[1], 6)} ACU</b>${usdTxt(v[0].p[1])}` });
+  // 2. part de chaque téléphone : estimation par jour d'après les métriques (lue toutes les 10 min)
+  const serie = SERIE_COMPUTE ? SERIE_COMPUTE.serie.filter(p => p[0] >= t0) : [];
+  const epj = (SERIE_COMPUTE && SERIE_COMPUTE.epoques_par_jour) || 16;
+  const tels = PHONES.map((p, i) => ({ nom: p.name, court: p.name.replace('Téléphone ', 'Tél. '), couleur: COULEURS_TEL[i % COULEURS_TEL.length],
+    points: serie.filter(q => q[1][p.name] != null).map(q => [q[0], q[1][p.name] * epj]) }));
+  document.getElementById('g-tel-leg').innerHTML = tels.map(t => `<span><i style="background:${t.couleur}"></i>${esc(t.nom)}</span>`).join('');
+  graphe('g-tel', { type: 'lignes', zero: true, labelsFin: tels.length <= 4, series: tels, axe: v => fmt(v, 2),
+    infobulle: vals => { const tot = vals.reduce((a, v) => a + v.p[1], 0);
+      return vals.map(v => `<div><i style="background:${v.s.couleur}"></i>${esc(v.s.court)} : ${fmt(v.p[1], 3)} ACU/j (${tot ? Math.round(v.p[1] / tot * 100) : 0} %)</div>`).join('') +
+        `<div style="color:var(--muted)">total : ${fmt(tot, 3)} ACU/j</div>`; } });
+  // 3. prix de l'ACU (relevés du Pi)
+  const prix = hist.filter(h => h.price != null && h.t >= t0).map(h => [h.t, h.price]);
+  if (prix.length > 1) {
+    const ev = (prix[prix.length - 1][1] / prix[0][1] - 1) * 100;
+    document.getElementById('g-prix-note').innerHTML = `en dollars · <span class="${ev >= 0 ? 'pos' : 'neg'}">${ev >= 0 ? '+' : ''}${ev.toFixed(1)} %</span> sur la période`;
+  }
+  graphe('g-prix', { type: 'lignes', aire: true, series: [{ nom: 'Prix', couleur: '#119fbd', points: prix }], axe: v => '$' + fmt(v, 4),
+    infobulle: v => `<b>$${fmt(v[0].p[1], 5)}</b>` + (price && price.eur ? ` · ${fmt(v[0].p[1] * price.eur / price.usd, 5)} €` : '') });
+  // 4. solde disponible du compte principal
+  const solde = hist.filter(h => h.t >= t0).map(h => [h.t, h.free]);
+  graphe('g-solde', { type: 'lignes', aire: true, series: [{ nom: 'Solde', couleur: '#9a66ff', points: solde }], axe: v => fmt(v, 3),
+    infobulle: v => `<b>${fmt(v[0].p[1], 6)} ACU</b>${usdTxt(v[0].p[1])}` });
+}
+function drawChart() { try { dessinerGraphes(); } catch (e) { if (!(e instanceof ReferenceError)) throw e; } }  // le premier rendu peut précéder l'initialisation des graphiques   // appelé par render() et au redimensionnement
+async function pollGraphes() {
+  if (location.protocol !== 'file:') {
+    try { const r = await fetch('data/compute_serie.json', { cache: 'no-store' }); if (r.ok) SERIE_COMPUTE = await r.json(); } catch (e) {}
+  }
+  dessinerGraphes();
+}
+document.querySelector('.plages').addEventListener('click', e => {
+  const b = e.target.closest('button[data-plage]'); if (!b) return;
+  PLAGE = b.dataset.plage;
+  document.querySelectorAll('.plages button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  dessinerGraphes();
+});
+pollGraphes();
+setInterval(pollGraphes, 10 * 60e3);
+
+// ==================== Habillage : menu, apparition des sections, réseau animé ====================
+const MOINS_ANIM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+(function menu() {
+  const nav = document.getElementById('nav'), burger = document.getElementById('burger');
+  const fermer = () => { nav.classList.remove('ouvert'); burger.setAttribute('aria-expanded', 'false'); };
+  burger.addEventListener('click', () => {
+    const o = nav.classList.toggle('ouvert'); burger.setAttribute('aria-expanded', String(o));
+  });
+  document.getElementById('menu').addEventListener('click', e => { if (e.target.closest('a, button')) fermer(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') fermer(); });
+  // surligne l'entrée du menu correspondant à la section visible
+  const liens = [...document.querySelectorAll('#menu a')];
+  const obs = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) {
+      liens.forEach(a => a.classList.toggle('actif', a.getAttribute('href') === '#' + e.target.id));
+    }
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  liens.forEach(a => { const s = document.querySelector(a.getAttribute('href')); if (s) obs.observe(s); });
+  // les sections apparaissent en glissant quand on fait défiler
+  if (!MOINS_ANIM && 'IntersectionObserver' in window) {
+    const r = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vu'); r.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.wrap > section, .wrap > details').forEach(s => { s.classList.add('revele'); r.observe(s); });
+  }
+})();
+
+// Réseau de points reliés dans le bandeau ; une impulsion le traverse à chaque nouveau bloc
+const reseau = (function () {
+  const cv = document.getElementById('reseau'), ctx = cv.getContext('2d');
+  let W = 0, H = 0, pts = [], impulsions = [], visible = true, dpr = 1;
+  function taille() {
+    dpr = Math.min(2, devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(Math.min(90, W * H / 9000));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25,
+      c: Math.random() < .5 ? '62,230,255' : '160,107,255' }));
+  }
+  function image() {
+    if (!visible) return requestAnimationFrame(image);
+    ctx.clearRect(0, 0, W, H);
+    const D = 120;
+    for (const p of pts) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1; }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < D) { ctx.strokeStyle = `rgba(${a.c},${(1 - d / D) * .35})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    }
+    for (const p of pts) { ctx.fillStyle = `rgba(${p.c},.9)`; ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, 7); ctx.fill(); }
+    // impulsions : cercles lumineux qui s'étendent depuis un point
+    impulsions = impulsions.filter(o => o.r < o.max);
+    for (const o of impulsions) {
+      o.r += 4.5; const al = 1 - o.r / o.max;
+      ctx.strokeStyle = `rgba(60,242,166,${al * .8})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, 7); ctx.stroke();
+      for (const p of pts) { const d = Math.hypot(p.x - o.x, p.y - o.y); if (Math.abs(d - o.r) < 8) { ctx.fillStyle = `rgba(60,242,166,${al})`; ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, 7); ctx.fill(); } }
+    }
+    requestAnimationFrame(image);
+  }
+  if (MOINS_ANIM) return { impulsion() {} };
+  taille(); addEventListener('resize', taille);
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(cv);
+  requestAnimationFrame(image);
+  return { impulsion() { if (!pts.length || document.hidden) return; const p = pts[Math.floor(Math.random() * pts.length)]; impulsions.push({ x: p.x, y: p.y, r: 0, max: Math.max(W, H) * .6 }); } };
+})();
+
+// ==================== Afficheur de blocs en direct (abonnement WebSocket aux nouveaux blocs) ====================
+const WSS = RPC.replace('https://', 'wss://');
+const NB_BLOCS = 10, DUREE_BLOC = 6000;
+let ws = null, wsId = 100, wsAttentes = {}, dernierNum = 0, dernierT = 0;
+const chaineEl = document.getElementById('chaine');
+function chaineEtat(t) { document.getElementById('chaine-etat').textContent = t; }
+function wsAppel(method, params) {
+  return new Promise((res, rej) => {
+    const id = ++wsId; wsAttentes[id] = { res, rej };
+    ws.send(JSON.stringify({ id, jsonrpc: '2.0', method, params }));
+    setTimeout(() => { if (wsAttentes[id]) { delete wsAttentes[id]; rej(new Error('délai dépassé')); } }, 15000);
+  });
+}
+function chaineConnecter() {
+  try { ws = new WebSocket(WSS); } catch (e) { chaineEtat('indisponible'); return; }
+  ws.onopen = () => { chaineEtat('en direct'); ws.send(JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'chain_subscribeNewHeads', params: [] })); };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.id && wsAttentes[m.id]) { const a = wsAttentes[m.id]; delete wsAttentes[m.id]; m.error ? a.rej(new Error(m.error.message)) : a.res(m.result); return; }
+    if (m.method === 'chain_newHead' && m.params) nouveauBloc(m.params.result).catch(() => {});
+  };
+  ws.onclose = () => { chaineEtat('reconnexion…'); for (const k in wsAttentes) { wsAttentes[k].rej(new Error('fermé')); delete wsAttentes[k]; } setTimeout(chaineConnecter, 5000); };
+  ws.onerror = () => { try { ws.close(); } catch (e) {} };
+}
+// Lit une extrinsèque SCALE : longueur compacte, version (bit 0x80 = signée), puis l'adresse du signataire
+function analyserExtrinseque(hex) {
+  const b0 = parseInt(hex.substr(2, 2), 16), mode = b0 & 3;
+  const saut = mode === 0 ? 1 : mode === 1 ? 2 : mode === 2 ? 4 : 1 + (b0 >> 2) + 4;
+  const p = 2 + saut * 2, version = parseInt(hex.substr(p, 2), 16);
+  if (!(version & 0x80)) return { signee: false };
+  return { signee: true, signataire: hex.substr(p + 2, 2) === '00' ? hex.substr(p + 4, 64) : null };
+}
+async function nouveauBloc(entete) {
+  const num = parseInt(entete.number, 16);
+  if (num <= dernierNum) return;
+  dernierNum = num; dernierT = Date.now();
+  document.getElementById('h-bloc').textContent = '#' + num.toLocaleString('fr-FR');
+  document.getElementById('prochain-num').textContent = (num + 1).toLocaleString('fr-FR');
+  const f = document.querySelector('#prochain .face'); f.replaceWith(f.cloneNode());   // relance le remplissage du prochain bloc
+  const hash = await wsAppel('chain_getBlockHash', [num]);
+  const bloc = await wsAppel('chain_getBlock', [hash]);
+  const ext = bloc.block.extrinsics;
+  const octets = ext.reduce((s, x) => s + (x.length - 2) / 2, 0);
+  const miens = new Map(PHONES.map(p => [p.acc.slice(-64), p.name]));
+  let signees = 0; const qui = new Set();
+  for (const x of ext) { const a = analyserExtrinseque(x); if (a.signee) { signees++; if (a.signataire && miens.has(a.signataire)) qui.add(miens.get(a.signataire)); } }
+  ajouterBloc({ num, t: dernierT, tx: signees, octets, qui: [...qui] });
+}
+function couleurs(tx) {
+  // de violet (calme) à cyan puis menthe (chargé)
+  const r = Math.min(1, tx / 150);
+  return r < .5 ? ['#5b2dff', '#a06bff', r] : r < .8 ? ['#6a3cff', '#3ee6ff', r] : ['#14b8a6', '#3cf2a6', r];
+}
+function ajouterBloc(b) {
+  const [c1, c2, r] = couleurs(b.tx);
+  const slot = document.createElement('div');
+  slot.className = 'slot' + (document.hidden || MOINS_ANIM ? '' : ' entre');
+  slot.innerHTML = `<div class="bloc" style="--c1:${c1};--c2:${c2};--rempli:${Math.max(8, Math.round(r * 100))}%" title="Bloc ${b.num.toLocaleString('fr-FR')} · ${b.tx} transactions · ${(b.octets / 1024).toFixed(1)} ko">
+    ${b.qui.length ? `<span class="badge">▲ ${esc(b.qui.map(n => n.replace('Téléphone', 'Tél.')).join(' + '))}</span>` : ''}
+    <div class="dessus"></div><div class="cote"></div><div class="face"></div>
+    <div class="txt"><span class="num">#${b.num.toLocaleString('fr-FR')}</span>
+      <span class="nb">${b.tx}<small>tx · ${(b.octets / 1024).toFixed(1).replace('.', ',')} ko</small></span>
+      <span class="age" data-t="${b.t}">à l'instant</span></div></div>`;
+  chaineEl.prepend(slot);
+  while (chaineEl.children.length > NB_BLOCS) chaineEl.lastElementChild.remove();
+  if (!document.hidden && !MOINS_ANIM) {
+    const onde = document.createElement('span'); onde.className = 'onde';
+    const zone = chaineEl.parentElement.getBoundingClientRect(), s = chaineEl.getBoundingClientRect();
+    onde.style.left = (s.left - zone.left + 62) + 'px'; onde.style.top = (s.top - zone.top + 76) + 'px';
+    chaineEl.parentElement.appendChild(onde); setTimeout(() => onde.remove(), 1100);
+    reseau.impulsion();
+  }
+}
+setInterval(() => {
+  const maintenant = Date.now();
+  for (const a of chaineEl.querySelectorAll('.age')) {
+    const s = Math.round((maintenant - a.dataset.t) / 1000);
+    a.textContent = (s < 3 ? "à l'instant" : s < 60 ? `il y a ${s} s` : `il y a ${Math.floor(s / 60)} min`);
+  }
+  if (dernierT) {
+    const reste = Math.max(0, (DUREE_BLOC - (maintenant - dernierT)) / 1000);
+    document.getElementById('prochain-s').innerHTML = (reste > 0 ? '~' + Math.ceil(reste) + ' s' : 'imminent') + '<small>en cours</small>';
+  }
+}, 500);
+chaineConnecter();
+</script>
+</body>
+</html>
