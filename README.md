@@ -137,6 +137,14 @@ Un téléphone envoie normalement un signal toutes les ~30 minutes ; l'alerte pa
 - Polices : Space Grotesk, IBM Plex Sans et IBM Plex Mono (Google Fonts).
 - Prix : API publique de [CoinGecko](https://www.coingecko.com).
 
+## Soutenir le projet
+
+> sudo rejoindre --cloud-rebellion --code m89va8 ▋
+
+Si ce tableau de bord vous a été utile et que vous rejoignez la Cloud Rebellion d'Acurast,
+entrez le code de parrainage **`m89va8`**. C'est gratuit pour vous, et ça me rapporte
+15 % en MIST. Une ⭐ sur le dépôt fait aussi très plaisir !
+
 ## Licence
 
 [MIT](LICENSE)
